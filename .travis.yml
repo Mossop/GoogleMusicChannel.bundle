@@ -10,3 +10,15 @@ addons:
 
 script:
   - scripts/build.sh
+  - mkdir GoogleMusicChannel.bundle
+  - cp -R Contents GoogleMusicChannel.bundle
+  - zip -r9 GoogleMusicChannel-${TRAVIS_OS_NAME}-x64.zip GoogleMusicChannel.bundle
+
+deploy:
+  provider: releases
+  api_key:
+    secure: lSSkoFfjKfnYDi3GMkcfsm4UCSmvDZawwIb51hOBEvsvFriDG1MoYFB3MnWDdCFVUsSzPmZfTeasENvt+f2fA3MRMb0VQaHFbbHZAnmnA+ASZ2uCdF1lLk82QZ93zI/QY5aVuQ9BBDadiMn/RRhN52f/kjiUQ9wv37KIXVOo7U8W1vpSigbG5dug+uL665xXxKfqjRA9k+9s0MkePXnOo+cRbRQ6KtJ6WtZe95pI4UTF3V76jF6Td/lH6lYf3VpTAMnpYOEAZtIFulpo1YpGQrGIdHNtPRexuauYmPqtZddmBSGBpEYpCN+LlsqvBigPybh8O9j+7upqnvKWoIWSD4/ETy0YQYIIV2kGvkT+sJLIqE+rnYnYNW/hATd7J+blTGm1Dz+PQq65i8tMVmq37OBjqVWbKfcFUyeC2HKvfRsEC/B8NFWyYK7hJq8ddCfSEGFFe+tdlBUwkcGWJk6bRYrZxgRpPvlu1GZaDicsFE+FAyQUnyOTWwJnl1rMCiLZVP9Xo8x3mvEbK3i1qdUf2atViAgjynLmYribXPbZWrAV/+c4TAzK9nJy68D4NOZv8ZkIZLMWPwwe0AMTl+2eX+oiYW0JeGjwjs8+4eLwzDAhdZOXnyYbX5DSoEhCyF9dv5DDpVRhS0LxdYmrBIqCYOpq/JRshDjAaKyHMCpmTlo=
+  skip_cleanup: true
+  file: GoogleMusicChannel-${TRAVIS_OS_NAME}-x64.zip
+  on:
+    tags: true
