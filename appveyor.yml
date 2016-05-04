@@ -1,0 +1,21 @@
+platform: x86
+
+image: Visual Studio 2015
+
+pull_requests:
+  do_not_increment_build_number: true
+
+artifacts:
+  - path: GoogleMusicChannel.zip
+    name: GoogleMusicChannel
+
+install:
+  - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x86
+  - scripts\build.bat
+  - mkdir GoogleMusicChannel.bundle\Contents
+  - xcopy /s Contents GoogleMusicChannel.bundle\Contents
+  - 7z a GoogleMusicChannel.zip GoogleMusicChannel.bundle\
+
+build: off
+
+test: off

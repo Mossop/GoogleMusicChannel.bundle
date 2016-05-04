@@ -1,3 +1,5 @@
+from gmusicapi import Mobileclient
+
 PREFIX = '/music/gmusic'
 
 def Start():

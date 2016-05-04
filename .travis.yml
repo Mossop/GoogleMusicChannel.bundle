@@ -1,0 +1,12 @@
+language: cpp
+os:
+  - osx
+  - linux
+
+addons:
+  apt:
+    packages:
+      - python-pip
+
+script:
+  - scripts/build.sh
