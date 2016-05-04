@@ -1,8 +1,34 @@
+import logging
+
 from gmusicapi import Mobileclient
 
 PREFIX = '/music/gmusic'
 
-client = Mobileclient()
+class LogHandler(logging.Handler):
+    def __init__(self):
+        logging.Handler.__init__(self)
+
+    def emit(self, record):
+        self.format(record)
+
+        message = record["message"]
+
+        if record["levelname"] == "DEBUG":
+            Log.Debug(message)
+        if record["levelname"] == "INFO":
+            Log.Info(message)
+        if record["levelname"] == "WARNING":
+            Log.Warn(message)
+        if record["levelname"] == "ERROR":
+            Log.Error(message)
+        if record["levelname"] == "CRITICAL":
+            Log.Critical(message)
+
+
+logger = logging.getLogger("gmusicapi")
+logger.addHandler(LogHandler())
+
+client = Mobileclient(False, False, True)
 
 def login():
     if Prefs["username"] is None or Prefs["password"] is None:
