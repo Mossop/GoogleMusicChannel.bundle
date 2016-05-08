@@ -288,6 +288,12 @@ class Artist(object):
     def name(self):
         return self.raw["name"]
 
+    @property
+    def thumb(self):
+        if len(self.art) > 0:
+            return list(self.art)[0]
+        return R("googlemusic.png")
+
 class Album(object):
     library = None
     id = None
@@ -360,6 +366,18 @@ class Album(object):
     def name(self):
         return self.raw["name"]
 
+    @property
+    def thumb(self):
+        if len(self.art) > 0:
+            return list(self.art)[0]
+        return R("googlemusic.png")
+
+    @property
+    def url(self):
+        if "albumId" in self.raw:
+            return "https://play.google.com/music/m/" + self.raw["albumId"]
+        return "https://play.google.com/music/m/" + self.id
+
 class Track(object):
     library = None
     id = None
@@ -388,6 +406,16 @@ class Track(object):
     @property
     def title(self):
         return self.raw["title"]
+
+    @property
+    def thumb(self):
+        return self.album.thumb
+
+    @property
+    def url(self):
+        if len(self.art) > 0:
+            return list(self.art)[0]
+        return R("googlemusic.png")
 
 internal = None
 

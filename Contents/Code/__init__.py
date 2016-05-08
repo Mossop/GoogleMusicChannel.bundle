@@ -67,13 +67,18 @@ def Start():
 
     Thread.Create(refresh)
 
+    ObjectContainer.title1 = L("title")
+    Plugin.AddViewGroup("artist_list", viewMode="InfoList", mediaType="artists", thumb=True)
+    Plugin.AddViewGroup("album_list", viewMode="Albums", mediaType="playlists", thumb=True)
+    Plugin.AddViewGroup("track_list", viewMode="Songs", mediaType="tracks", thumb=True)
+
 def ValidatePrefs():
     Log.Debug("Validate called for %s" % Prefs["username"])
     login()
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
 def Main():
-    oc = ObjectContainer(title1=L("title"), content=ContainerContent.Mixed)
+    oc = ObjectContainer(content=ContainerContent.Mixed)
 
     oc.add(DirectoryObject(
         key = Callback(Artists),
@@ -89,32 +94,39 @@ def Main():
 
 @route(PREFIX + "/artists")
 def Artists():
-    oc = ObjectContainer(title1=L("title"), title2=L("artists"), content=ContainerContent.Artists)
+    oc = ObjectContainer(
+        title2=L("artists"),
+        content=ContainerContent.Artists,
+        view_group="artist_list"
+    )
 
     artists = library.get_artists()
     for artist in smart_sort(artists):
         oc.add(ArtistObject(
             key = Callback(Artist, artistId=artist.id),
             rating_key = artist.id,
-            title = artist.name
+            title = artist.name,
+            thumb = artist.thumb
         ))
 
     return oc
 
 @route(PREFIX + "/albums")
 def Albums():
-    oc = ObjectContainer(title1=L("title"), title2=L("albums"), content=ContainerContent.Albums)
+    oc = ObjectContainer(
+        title2=L("albums"),
+        content=ContainerContent.Playlists,
+        view_group="album_list"
+    )
 
     albums = library.get_albums()
-    Log.Debug("Showing %d albums" % len(albums))
-    try:
-        for album in smart_sort(albums):
-            oc.add(DirectoryObject(
-                key = Callback(Album, albumId=album.id),
-                title = album.name
-            ))
-    except:
-        Log.Exception("Failed adding albums")
+    for album in smart_sort(albums):
+        oc.add(PlaylistObject(
+            key = Callback(Album, albumId=album.id),
+            title = album.name,
+            tagline = album.artist.name,
+            thumb = album.thumb
+        ))
 
     return oc
 
@@ -122,12 +134,19 @@ def Albums():
 def Artist(artistId):
     artist = library.get_artist(artistId)
 
-    oc = ObjectContainer(title1=L("title"), title2=artist.name, content=ContainerContent.Albums)
+    oc = ObjectContainer(
+        title2=artist.name,
+        content=ContainerContent.Tracks,
+        view_group="track_list",
+        art=artist.thumb
+    )
 
-    for album in smart_sort(artist.albums):
-        oc.add(DirectoryObject(
+    for album in artist.albums:
+        oc.add(PlaylistObject(
             key = Callback(Album, albumId=album.id),
             title = album.name,
+            tagline = artist.name,
+            thumb = album.thumb
         ))
 
     return oc
@@ -136,23 +155,24 @@ def Artist(artistId):
 def Album(albumId):
     album = library.get_album(albumId)
 
-    oc = ObjectContainer(title1=L("title"), title2=album.name, content=ContainerContent.Tracks)
+    oc = ObjectContainer(
+        title2=album.name,
+        content=ContainerContent.Tracks,
+        view_group="track_list",
+        art=album.thumb
+    )
 
-    idx = 1
     for track in album.tracks:
         oc.add(TrackObject(
-            key = Callback(Track, trackId=track.id),
+            key = Callback(TrackMeta, trackId = track.id),
             rating_key = track.id,
             title = track.title,
-            source_title = SOURCE,
             album = album.name,
-            artist = album.artist.name,
-            index = idx
+            artist = album.artist.name
         ))
-        idx = idx + 1
 
     return oc
 
 @route(PREFIX + "/track")
-def Track(trackId):
-    pass
+def TrackMeta(trackId):
+    return ObjectContainer()
