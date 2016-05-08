@@ -13,14 +13,12 @@
 # limitations under the License.
 
 import hashlib
-import json
 from base64 import b64encode
 from uuid import uuid4
 
 from gmusicapi import Mobileclient
 
-DB_PREFIX = "gmdb-"
-DB_SCHEMA = 1
+DB_SCHEMA = 2
 
 def hash(data):
     return b64encode(hashlib.sha256(data).digest())
@@ -32,16 +30,16 @@ def get_album_hash(artist, name):
 
 def locked(func):
     def inner(*args, **kwargs):
-        Thread.AcquireLock("library-lock")
-        try:
+        #Thread.AcquireLock("library-lock")
+        #try:
             return func(*args, **kwargs)
-        finally:
-            Thread.ReleaseLock("library-lock")
+        #finally:
+        #    Thread.ReleaseLock("library-lock")
     return inner
 
 class InternalLibrary(object):
     client = None
-    device_id = None
+    device_id = Mobileclient.FROM_MAC_ADDRESS
 
     # These are all the artists we know of mapped by the artist name
     artists = None
@@ -55,52 +53,46 @@ class InternalLibrary(object):
 
     def __init__(self, username, password):
         self.username = username
-        self.dbname = DB_PREFIX + hash(username)
+        self.password = username
 
         self.clear()
-        self.load()
-
         self.client = Mobileclient(False, False, True)
 
-        device_id = self.device_id
-        if device_id is None:
-            device_id = Mobileclient.FROM_MAC_ADDRESS
-
         try:
-            self.client.login(username, password, device_id)
+            self.client.login(username, password, self.device_id)
         except:
             Log.Exception("Client couldn't log in.")
 
     # Because of threading shenanigans we have to manually pickle classes
     @locked
-    def save(self):
+    def pickle(self):
         artists = set(map(lambda a: a.artist, self.albums.values()))
-        pickle = {
-            "schema": DB_SCHEMA,
-            "device_id": self.device_id,
+        return {
+            "username": self.username,
+            "password": self.password,
             "artists": map(lambda a: a.pickle(), artists)
         }
-
-        Data.Save(self.dbname, json.dumps(pickle))
 
     def logout(self):
         self.client.logout()
 
-    def load(self):
+    @classmethod
+    def unpickle(cls, data):
         try:
-            data = json.loads(Data.Load(self.dbname))
-            if data["schema"] != DB_SCHEMA:
-                return
+            library = cls(data["username"], data["password"])
 
-            self.clear()
-            self.device_id = data["device_id"]
+            library.clear()
+
             for artist_data in data["artists"]:
-                Artist.unpickle(self, artist_data)
+                Artist.unpickle(library, artist_data)
 
             Log.Info("Loaded a library with %d artists, %d albums and %d tracks." %
-                     (len(self.artists), len(self.albums), len(self.tracks)))
+                     (len(library.artists), len(library.albums), len(library.tracks)))
+
+            return library
         except:
             Log.Exception("Failed to load data.")
+            return None
 
     def add_track(self, track_data):
         track = Track(self, track_data)
@@ -214,8 +206,6 @@ class InternalLibrary(object):
 
             Log.Info("Update complete, library has %d artists, %d albums and %d tracks." %
                      (len(self.artists), len(self.albums), len(self.tracks)))
-
-            self.save()
         except:
             Log.Exception("Failed to update library.")
 
@@ -419,10 +409,21 @@ class Track(object):
 
 internal = None
 
+def load_from(data):
+    global internal
+
+    if data["schema"] != DB_SCHEMA:
+        return
+
+    internal = InternalLibrary.unpickle(data["library"])
+
 def set_credentials(username, password):
     global internal
 
     if internal is not None:
+        if internal.username == username and internal.password == password:
+            return
+
         internal.logout()
         internal = None
 
@@ -433,6 +434,10 @@ def set_credentials(username, password):
 
 def refresh():
     internal.update()
+    return {
+        "schema": DB_SCHEMA,
+        "library": internal.pickle()
+    }
 
 @locked
 def get_artists():

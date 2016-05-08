@@ -14,12 +14,11 @@
 
 import logging
 
-from gmusicapi import Mobileclient
-
-import library
+library = SharedCodeService.library
 
 PREFIX = '/music/gmusic'
 SOURCE = "Google Music"
+DB_NAME = "pickles"
 
 def smart_sort(list):
     def sanitize(s):
@@ -54,7 +53,8 @@ logger = logging.getLogger("gmusicapi")
 logger.addHandler(LogHandler())
 
 def refresh():
-    library.refresh()
+    data = library.refresh()
+    Data.SaveObject(DB_NAME, data)
 
     Thread.CreateTimer(60 * 10, refresh)
 
@@ -63,6 +63,13 @@ def login():
 
 def Start():
     Log.Debug("Start called for %s" % (Prefs["username"]))
+    if Data.Exists(DB_NAME):
+        try:
+            data = Data.LoadObject(DB_NAME)
+            library.load_from(data)
+        except:
+            Log.Exception("Failed to load initial data.")
+
     login()
 
     Thread.Create(refresh)
