@@ -140,22 +140,14 @@ def track_object(track):
         thumb = track.thumb
     )
 
-def full_album_object(album):
-    return AlbumObject(
-        url = album.url,
+def album_object(album):
+    return PlaylistObject(
+        key = Callback(Album, albumId=album.id),
         title = album.name,
         art = album.thumb,
         thumb = album.thumb,
-        artist = album.artist.name,
-        track_count = len(album.tracks)
-    )
-
-def fake_album_object(album):
-    return DirectoryObject(
-        key = Callback(Album, albumId = album.id),
-        title = album.name,
-        art = album.thumb,
-        thumb = album.thumb
+        tagline = album.artist.name,
+        duration = reduce(lambda a, t: a + t.duration, album.tracks, 0)
     )
 
 @route(PREFIX + "/albums")
@@ -168,7 +160,7 @@ def Albums():
 
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(full_album_object(album))
+        oc.add(album_object(album))
 
     return oc
 
@@ -198,7 +190,7 @@ def Artist(artistId):
     )
 
     for album in artist.albums:
-        oc.add(fake_album_object(album))
+        oc.add(album_object(album))
 
     return oc
 
