@@ -1,0 +1,149 @@
+# Copyright 2016 Dave Townsend
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import re
+import logging
+
+import library
+
+logger = logging.getLogger("googlemusicchannel.service.url")
+
+full_path = r'^https://play\.google\.com/music/listen\?u=\d+#/(album|artist|track)/([\w-]+)/'
+base_path = r'^https://play\.google\.com/music/m/([\w-]+)'
+
+def MetadataObjectForURL(url):
+    match = re.match(base_path, url)
+    if match is None:
+        return None
+
+    id = match.group(1)
+    logger.debug("Requested metadata for %s" % id)
+
+    item = library.get_item(id)
+    if item is None:
+        logger.warn("Couldn't find an object for id '%s'" % id)
+        return None
+
+    if isinstance(item, library.Album):
+        return MetadataObjectForAlbum(item)
+    if isinstance(item, library.Artist):
+        return MetadataObjectForArtist(item)
+    if isinstance(item, library.Track):
+        return MetadataObjectForTrack(item)
+
+    logger.warn("Unknown object type for id '%s'" % id)
+    return None
+
+def MediaObjectsForURL(url):
+    match = re.match(base_path, url)
+    if match is None:
+        return None
+
+    id = match.group(1)
+    logger.debug("Requested media objects for %s" % id)
+
+    item = library.get_item(id)
+    if item is None:
+        logger.warn("Couldn't find an object for id '%s'" % id)
+        return []
+
+    if isinstance(item, library.Album):
+        return MediaObjectsForAlbum(item)
+    if isinstance(item, library.Artist):
+        return MediaObjectsForArtist(item)
+    if isinstance(item, library.Track):
+        return MediaObjectsForTrack(item)
+
+    logger.warn("Unknown object type for id '%s'" % id)
+    return []
+
+def NormalizeURL(url):
+    match = re.match(full_path, url)
+    if match is not None:
+        return "https://play.google.com/music/m/%s" % match.group(2)
+
+    return url
+
+def MetadataObjectForAlbum(album):
+    return AlbumObject(
+        key = Callback(Tracks, albumId = album.id),
+        title = album.name,
+        art = album.thumb,
+        thumb = album.thumb,
+        artist = album.artist.name,
+        track_count = len(album.tracks)
+    )
+
+def MetadataObjectForTrack(track):
+    return TrackObject(
+        title = track.title,
+        index = track.index,
+        artist = track.album.artist.name,
+        album = track.album.name,
+        duration = track.duration,
+        thumb = track.thumb
+    )
+
+def MediaObjectsForAlbum(album):
+    return None
+
+def MediaObjectsForTrack(track):
+    return [
+        MediaObject(
+            bitrate = 320,
+            container = Container.MP3,
+            audio_codec = AudioCodec.MP3,
+            duration = track.duration,
+            parts = [PartObject(
+                key = Callback(TrackStream, trackId = track.id, quality = "hi"),
+                duration = track.duration
+            )]
+        ),
+        MediaObject(
+            bitrate = 160,
+            container = Container.MP3,
+            audio_codec = AudioCodec.MP3,
+            duration = track.duration,
+            parts = [PartObject(
+                key = Callback(TrackStream, trackId = track.id, quality = "med"),
+                duration = track.duration
+            )]
+        ),
+        MediaObject(
+            bitrate = 128,
+            container = Container.MP3,
+            audio_codec = AudioCodec.MP3,
+            duration = track.duration,
+            parts = [PartObject(
+                key = Callback(TrackStream, trackId = track.id, quality = "low"),
+                duration = track.duration
+            )]
+        ),
+    ]
+
+def Tracks(albumId):
+    album = library.get_album(albumId)
+
+    oc = ObjectContainer()
+
+    for track in sorted(album.tracks, library.track_cmp):
+        oc.add(MetadataObjectForTrack(track))
+
+    return oc
+
+
+def TrackStream(trackId, quality):
+    track = library.get_track(trackId)
+
+    return Redirect(track.get_stream_url(quality))

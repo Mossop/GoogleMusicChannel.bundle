@@ -14,43 +14,48 @@
 
 import logging
 
-library = SharedCodeService.library
+import library
 
 PREFIX = '/music/gmusic'
 SOURCE = "Google Music"
 DB_NAME = "pickles"
 
 def smart_sort(list):
-    def sanitize(s):
-        if s.lower()[0:4] == "the ":
+    def simplify(s):
+        s = s.lower()
+        if s[0:4] == "the ":
             return s[4:]
         return s
 
-    return sorted(list, lambda a, b: cmp(a, b), lambda o: sanitize(o.name))
+    return sorted(list, lambda a, b: cmp(a, b), lambda o: simplify(o.name))
 
 class LogHandler(logging.Handler):
     def __init__(self):
         logging.Handler.__init__(self)
 
     def emit(self, record):
-        self.format(record)
+        message = self.format(record)
 
-        message = record["message"]
-
-        if record["levelname"] == "DEBUG":
+        if record.levelname == "DEBUG":
             Log.Debug(message)
-        if record["levelname"] == "INFO":
+        if record.levelname == "INFO":
             Log.Info(message)
-        if record["levelname"] == "WARNING":
+        if record.levelname == "WARNING":
             Log.Warn(message)
-        if record["levelname"] == "ERROR":
+        if record.levelname == "ERROR":
             Log.Error(message)
-        if record["levelname"] == "CRITICAL":
+        if record.levelname == "CRITICAL":
             Log.Critical(message)
 
-
+lhandler = LogHandler()
 logger = logging.getLogger("gmusicapi")
-logger.addHandler(LogHandler())
+logger.addHandler(lhandler)
+logger.setLevel(logging.WARNING)
+logger = logging.getLogger("googlemusicchannel")
+logger.addHandler(lhandler)
+logger.setLevel(logging.DEBUG)
+
+logger = logging.getLogger("googlemusicchannel.channel")
 
 def refresh():
     data = library.refresh()
@@ -62,13 +67,13 @@ def login():
     library.set_credentials(Prefs["username"], Prefs["password"])
 
 def Start():
-    Log.Debug("Start called for %s" % (Prefs["username"]))
+    logger.debug("Start called for %s" % (Prefs["username"]))
     if Data.Exists(DB_NAME):
         try:
             data = Data.LoadObject(DB_NAME)
             library.load_from(data)
         except:
-            Log.Exception("Failed to load initial data.")
+            logger.exception("Failed to load initial data.")
 
     login()
 
@@ -76,11 +81,11 @@ def Start():
 
     ObjectContainer.title1 = L("title")
     Plugin.AddViewGroup("artist_list", viewMode="InfoList", mediaType="artists", thumb=True)
-    Plugin.AddViewGroup("album_list", viewMode="Albums", mediaType="playlists", thumb=True)
-    Plugin.AddViewGroup("track_list", viewMode="Songs", mediaType="tracks", thumb=True)
+    Plugin.AddViewGroup("album_list", viewMode="Albums", mediaType="albums", thumb=True)
+    Plugin.AddViewGroup("track_list", viewMode="Songs", mediaType="songs", thumb=True)
 
 def ValidatePrefs():
-    Log.Debug("Validate called for %s" % Prefs["username"])
+    logger.debug("Validate called for %s" % Prefs["username"])
     login()
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
@@ -95,6 +100,11 @@ def Main():
     oc.add(DirectoryObject(
         key = Callback(Albums),
         title = L("albums")
+    ))
+
+    oc.add(DirectoryObject(
+        key = Callback(Songs),
+        title = L("songs")
     ))
 
     return oc
@@ -113,10 +123,40 @@ def Artists():
             key = Callback(Artist, artistId=artist.id),
             rating_key = artist.id,
             title = artist.name,
+            art = artist.art,
             thumb = artist.thumb
         ))
 
     return oc
+
+def track_object(track):
+    return TrackObject(
+        url = track.url,
+        title = track.title,
+        index = track.index,
+        artist = track.album.artist.name,
+        album = track.album.name,
+        duration = track.duration,
+        thumb = track.thumb
+    )
+
+def full_album_object(album):
+    return AlbumObject(
+        url = album.url,
+        title = album.name,
+        art = album.thumb,
+        thumb = album.thumb,
+        artist = album.artist.name,
+        track_count = len(album.tracks)
+    )
+
+def fake_album_object(album):
+    return DirectoryObject(
+        key = Callback(Album, albumId = album.id),
+        title = album.name,
+        art = album.thumb,
+        thumb = album.thumb
+    )
 
 @route(PREFIX + "/albums")
 def Albums():
@@ -128,12 +168,21 @@ def Albums():
 
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(PlaylistObject(
-            key = Callback(Album, albumId=album.id),
-            title = album.name,
-            tagline = album.artist.name,
-            thumb = album.thumb
-        ))
+        oc.add(fake_album_object(album))
+
+    return oc
+
+@route(PREFIX + "/songs")
+def Songs():
+    oc = ObjectContainer(
+        title2=L("songs"),
+        content=ContainerContent.Tracks,
+        view_group="track_list"
+    )
+
+    tracks = library.get_tracks()
+    for track in tracks:
+        oc.add(track_object(track))
 
     return oc
 
@@ -143,18 +192,13 @@ def Artist(artistId):
 
     oc = ObjectContainer(
         title2=artist.name,
-        content=ContainerContent.Tracks,
-        view_group="track_list",
+        content=ContainerContent.Albums,
+        view_group="album_list",
         art=artist.thumb
     )
 
     for album in artist.albums:
-        oc.add(PlaylistObject(
-            key = Callback(Album, albumId=album.id),
-            title = album.name,
-            tagline = artist.name,
-            thumb = album.thumb
-        ))
+        oc.add(fake_album_object(album))
 
     return oc
 
@@ -169,17 +213,7 @@ def Album(albumId):
         art=album.thumb
     )
 
-    for track in album.tracks:
-        oc.add(TrackObject(
-            key = Callback(TrackMeta, trackId = track.id),
-            rating_key = track.id,
-            title = track.title,
-            album = album.name,
-            artist = album.artist.name
-        ))
+    for track in sorted(album.tracks, library.track_cmp):
+        oc.add(track_object(track))
 
     return oc
-
-@route(PREFIX + "/track")
-def TrackMeta(trackId):
-    return ObjectContainer()
