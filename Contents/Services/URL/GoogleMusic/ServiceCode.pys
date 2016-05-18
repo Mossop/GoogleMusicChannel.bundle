@@ -106,7 +106,7 @@ def MediaObjectsForTrack(track):
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, trackId = track.id, quality = "hi"),
+                key = HTTPLiveStreamURL(Callback(TrackStream, trackId = track.id, quality = "hi")),
                 duration = track.duration
             )]
         ),
@@ -116,7 +116,7 @@ def MediaObjectsForTrack(track):
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, trackId = track.id, quality = "med"),
+                key = HTTPLiveStreamURL(Callback(TrackStream, trackId = track.id, quality = "med")),
                 duration = track.duration
             )]
         ),
@@ -126,7 +126,7 @@ def MediaObjectsForTrack(track):
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, trackId = track.id, quality = "low"),
+                key = HTTPLiveStreamURL(Callback(TrackStream, trackId = track.id, quality = "low")),
                 duration = track.duration
             )]
         ),

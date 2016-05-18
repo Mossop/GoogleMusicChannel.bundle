@@ -168,7 +168,7 @@ def Albums():
 
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(fake_album_object(album))
+        oc.add(full_album_object(album))
 
     return oc
 
