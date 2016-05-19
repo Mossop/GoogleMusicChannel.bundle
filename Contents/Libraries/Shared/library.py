@@ -28,7 +28,7 @@ sys.path.append(platfom_path)
 
 from gmusicapi import Mobileclient
 
-DB_SCHEMA = 1
+DB_SCHEMA = 2
 
 logger = logging.getLogger("googlemusicchannel.library")
 
@@ -74,6 +74,10 @@ class InternalLibrary(object):
     # These are all the tracks in the user's library. The key is the track's library ID
     tracks = None
 
+    root_genres = None
+
+    genres = None
+
     def __init__(self, username, password):
         self.username = username
         self.password = password
@@ -99,6 +103,7 @@ class InternalLibrary(object):
             "username": self.username,
             "password": self.password,
             "device_id": self.device_id,
+            "genres": map(lambda g: g.pickle(), self.root_genres),
             "artists": map(lambda a: a.pickle(), artists)
         }
 
@@ -112,6 +117,9 @@ class InternalLibrary(object):
             library.device_id = data["device_id"]
 
             library.clear()
+
+            for genre_data in data["genres"]:
+                Genre.unpickle(library, library.root_genres, genre_data)
 
             for artist_data in data["artists"]:
                 Artist.unpickle(library, artist_data)
@@ -202,6 +210,8 @@ class InternalLibrary(object):
         self.artists = {}
         self.albums = {}
         self.tracks = {}
+        self.root_genres = []
+        self.genres = {}
 
     def update(self):
         logger.info("Starting library update.")
@@ -210,6 +220,15 @@ class InternalLibrary(object):
             if not self.client.is_authenticated:
                 logger.error("Client isn't authenticated.")
                 return
+
+            def find_genres(parent, list):
+                genres = self.client.get_genres(parent)
+                for genre in genres:
+                    obj = Genre(self, list, genre)
+                    find_genres(obj.id, obj.children)
+
+            self.root_genres = []
+            find_genres(None, self.root_genres)
 
             data = self.client.get_all_songs(False, False)
             logger.info("Found %d tracks in the cloud library." % (len(data)))
@@ -253,6 +272,47 @@ class InternalLibrary(object):
                      (len(self.artists), len(self.albums), len(self.tracks)))
         except:
             logger.exception("Failed to update library.")
+
+class Genre(object):
+    raw = None
+    library = None
+    children = None
+
+    @locked
+    def __init__(self, library, parent_list, data):
+        self.library = library
+        self.raw = data
+        parent_list.append(self)
+        self.children = []
+
+        logger.debug("Added genre %s" % self.name)
+        library.genres[self.name] = self
+
+    @classmethod
+    def unpickle(cls, library, parent_list, data):
+        genre = cls(library, parent_list, data["raw"])
+
+        for child_data in data["children"]:
+            Genre.unpickle(library, genre.children, child_data)
+
+    def pickle(self):
+        return {
+            "raw": self.raw,
+            "children": map(lambda g: g.pickle(), self.children)
+        }
+
+    # Public API
+    @property
+    def id(self):
+        return self.name
+
+    @property
+    def name(self):
+        return self.raw["name"]
+
+    @property
+    def tracks(self):
+        return filter(lambda t: t.genre == self, self.library.tracks.values())
 
 class Artist(object):
     library = None
@@ -444,6 +504,13 @@ class Track(object):
 
         library.tracks[self.id] = self
 
+        if not self.raw["genre"] in self.library.genres:
+            Genre(self.library, self.library.root_genres, {
+                "name": self.raw["genre"],
+                "id": self.raw["genre"].upper(),
+                "images": []
+            })
+
     def pickle(self):
         return {
             "raw": self.raw
@@ -454,6 +521,10 @@ class Track(object):
         return self.library.client.get_stream_url(self.id, device_id, quality)
 
     # Public API
+    @property
+    def genre(self):
+        return self.library.genres[self.raw["genre"]]
+
     @property
     def title(self):
         return self.raw["title"]
@@ -554,3 +625,12 @@ def get_track(id):
     if len(maybe) > 0:
         return maybe[0]
     return None
+
+@locked
+def get_genres():
+    genres = set(map(lambda t: t.genre, internal.tracks.values()))
+    return list(genres)
+
+@locked
+def get_genre(name):
+    return internal.genres[name]

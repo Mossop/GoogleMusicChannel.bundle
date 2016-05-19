@@ -1,7 +1,8 @@
 {
   "title": "Google Music",
-  "albums": "Albums",
-  "artists": "Artists",
-  "songs": "Songs",
+  "albums": "My Albums",
+  "artists": "My Artists",
+  "songs": "My Songs",
+  "genres": "My Genres",
   "various": "Various Artists"
 }

@@ -107,6 +107,11 @@ def Main():
         title = L("songs")
     ))
 
+    oc.add(DirectoryObject(
+        key = Callback(Genres),
+        title = L("genres")
+    ))
+
     return oc
 
 @route(PREFIX + "/artists")
@@ -173,6 +178,37 @@ def Songs():
     )
 
     tracks = library.get_tracks()
+    for track in tracks:
+        oc.add(track_object(track))
+
+    return oc
+
+@route(PREFIX + "/genres")
+def Genres():
+    oc = ObjectContainer(
+        title2=L("genres"),
+        content=ContainerContent.Genres
+    )
+
+    genres = library.get_genres()
+    for genre in genres:
+        oc.add(DirectoryObject(
+            key = Callback(GenreTracks, genreId = genre.id),
+            title = genre.name
+        ))
+
+    return oc
+
+@route(PREFIX + "/genre")
+def GenreTracks(genreId):
+    genre = library.get_genre(genreId)
+
+    oc = ObjectContainer(
+        title2=genre.name,
+        content=ContainerContent.Tracks
+    )
+
+    tracks = genre.tracks
     for track in tracks:
         oc.add(track_object(track))
 
