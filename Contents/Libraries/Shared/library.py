@@ -18,6 +18,13 @@ from base64 import b64encode
 from uuid import uuid4
 import logging
 import urllib
+import sys
+import platform
+import os
+
+arch = "%s-%s" % (sys.platform, platform.architecture()[0])
+platfom_path = os.path.abspath(os.path.join(os.path.dirname(__file__), arch))
+sys.path.append(platfom_path)
 
 from gmusicapi import Mobileclient
 

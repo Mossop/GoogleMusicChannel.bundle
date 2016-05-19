@@ -2,13 +2,12 @@
 
 cd `dirname $0`/..
 
-rm -rf Contents/Libraries
-mkdir -p Contents/Libraries/Shared
+arch=`python -c "import sys; import platform; print(\"%s-%s\" % (sys.platform, platform.architecture()[0]))"`
 
-# Override the system lib2to3. See ../resources/README.md
-cp -R resources/lib2to3 Contents/Libraries/Shared
+rm -rf Contents/Libraries/Shared/${arch}
+mkdir Contents/Libraries/Shared/${arch}
 
-pip install -t Contents/Libraries/Shared -r requirements.txt
+pip install -t Contents/Libraries/Shared/${arch} -r requirements.txt
 
 # For some reason without this protobuf is broken as a module
-echo "" >Contents/Libraries/Shared/google/__init__.py
+echo "" >Contents/Libraries/Shared/${arch}/google/__init__.py

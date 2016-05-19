@@ -1,1 +1,7 @@
-Contents/Libraries
+Contents/Libraries/Shared/win32-32bit
+Contents/Libraries/Shared/linux2-32bit
+Contents/Libraries/Shared/linux2-64bit
+Contents/Libraries/Shared/darwin-64bit
+.platform
+*.pyc
+*.pickle
