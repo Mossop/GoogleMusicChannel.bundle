@@ -194,7 +194,9 @@ def Genres():
     for genre in genres:
         oc.add(DirectoryObject(
             key = Callback(GenreTracks, genreId = genre.id),
-            title = genre.name
+            title = genre.name,
+            art = genre.thumb,
+            thumb = genre.thumb
         ))
 
     return oc

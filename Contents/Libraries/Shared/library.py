@@ -314,6 +314,15 @@ class Genre(object):
     def tracks(self):
         return filter(lambda t: t.genre == self, self.library.tracks.values())
 
+    @property
+    def thumb(self):
+        if "images" in self.raw and len(self.raw["images"]) > 0:
+            return self.raw["images"][0]["url"]
+        tracks = filter(lambda t: t.album.thumb is not None, self.tracks)
+        if len(tracks) == 0:
+            return None
+        return tracks[0].album.thumb
+
 class Artist(object):
     library = None
     id = None
