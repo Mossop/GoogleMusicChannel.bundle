@@ -14,66 +14,66 @@
 
 import re
 import logging
+from urlparse import urlsplit, parse_qs
 
-import library
+import music
 
 logger = logging.getLogger("googlemusicchannel.service.url")
 
-full_path = r'^https://play\.google\.com/music/listen\?u=\d+#/(album|artist|track)/([\w-]+)/'
-base_path = r'^https://play\.google\.com/music/m/([\w-]+)'
+base_path = 'https://play.google.com/music/m/'
 
-def MetadataObjectForURL(url):
-    match = re.match(base_path, url)
-    if match is None:
+def get_item_for_url(url):
+    if url[0:len(base_path)] != base_path:
+        logger.warn("Failed to match url '%s'" % url)
         return None
 
-    id = match.group(1)
+    parts = urlsplit(url[len(base_path):])
+    id = parts.path
+    args = parse_qs(parts.query)
+
     logger.debug("Requested metadata for %s" % id)
 
+    if "u" in args:
+        lid = args["u"]
+    else:
+        lid = 0
+
+    library = music.get_library(lid)
     item = library.get_item(id)
     if item is None:
         logger.warn("Couldn't find an object for id '%s'" % id)
+
+    return item
+
+def MetadataObjectForURL(url):
+    item = get_item_for_url(url)
+    if item is None:
         return None
 
-    if isinstance(item, library.Album):
+    if isinstance(item, music.Album):
         return MetadataObjectForAlbum(item)
-    if isinstance(item, library.Artist):
+    if isinstance(item, music.Artist):
         return MetadataObjectForArtist(item)
-    if isinstance(item, library.Track):
+    if isinstance(item, music.Track):
         return MetadataObjectForTrack(item)
 
     logger.warn("Unknown object type for id '%s'" % id)
     return None
 
 def MediaObjectsForURL(url):
-    match = re.match(base_path, url)
-    if match is None:
+    item = get_item_for_url(url)
+    if item is None:
         return None
 
-    id = match.group(1)
-    logger.debug("Requested media objects for %s" % id)
-
-    item = library.get_item(id)
-    if item is None:
-        logger.warn("Couldn't find an object for id '%s'" % id)
-        return []
-
-    if isinstance(item, library.Album):
+    if isinstance(item, music.Album):
         return MediaObjectsForAlbum(item)
-    if isinstance(item, library.Artist):
+    if isinstance(item, music.Artist):
         return MediaObjectsForArtist(item)
-    if isinstance(item, library.Track):
+    if isinstance(item, music.Track):
         return MediaObjectsForTrack(item)
 
     logger.warn("Unknown object type for id '%s'" % id)
     return []
-
-def NormalizeURL(url):
-    match = re.match(full_path, url)
-    if match is not None:
-        return "https://play.google.com/music/m/%s" % match.group(2)
-
-    return url
 
 def MetadataObjectForAlbum(album):
     return AlbumObject(
@@ -88,7 +88,6 @@ def MetadataObjectForAlbum(album):
 def MetadataObjectForTrack(track):
     return TrackObject(
         title = track.title,
-        index = track.index,
         artist = track.album.artist.name,
         album = track.album.name,
         duration = track.duration,
@@ -121,17 +120,17 @@ def MediaObjectsForTrack(track):
     ]
 
 def Tracks(albumId):
-    album = library.get_album(albumId)
+    album = music.get_album(albumId)
 
     oc = ObjectContainer()
 
-    for track in sorted(album.tracks, library.track_cmp):
+    for track in sorted(album.tracks, music.track_cmp):
         oc.add(MetadataObjectForTrack(track))
 
     return oc
 
 
 def TrackStream(trackId, quality):
-    track = library.get_track(trackId)
+    track = music.get_track(trackId)
 
     return Redirect(track.get_stream_url(quality))

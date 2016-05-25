@@ -14,7 +14,7 @@
 
 import logging
 
-import library
+import music
 
 PREFIX = '/music/gmusic'
 SOURCE = "Google Music"
@@ -58,20 +58,20 @@ logger.setLevel(logging.DEBUG)
 logger = logging.getLogger("googlemusicchannel.channel")
 
 def refresh():
-    data = library.refresh()
-    Data.SaveObject(DB_NAME, data)
+    data = music.refresh()
+    #Data.SaveObject(DB_NAME, data)
 
     Thread.CreateTimer(60 * 10, refresh)
 
 def login():
-    library.set_credentials(Prefs["username"], Prefs["password"])
+    music.set_credentials(Prefs["username"], Prefs["password"])
 
 def Start():
     logger.debug("Start called for %s" % (Prefs["username"]))
     if Data.Exists(DB_NAME):
         try:
             data = Data.LoadObject(DB_NAME)
-            library.load_from(data)
+            #music.load_from(data)
         except:
             logger.exception("Failed to load initial data.")
 
@@ -93,28 +93,40 @@ def Main():
     oc = ObjectContainer(content=ContainerContent.Mixed)
 
     oc.add(DirectoryObject(
-        key = Callback(Artists),
-        title = L("artists")
-    ))
-
-    oc.add(DirectoryObject(
-        key = Callback(Albums),
-        title = L("albums")
-    ))
-
-    oc.add(DirectoryObject(
-        key = Callback(Songs),
-        title = L("songs")
-    ))
-
-    oc.add(DirectoryObject(
-        key = Callback(Genres),
-        title = L("genres")
+        key = Callback(Library, lid=0),
+        title = L("library")
     ))
 
     return oc
 
-@route(PREFIX + "/artists")
+@route(PREFIX + "/{lid}/library")
+def Library(lid):
+    oc = ObjectContainer(content=ContainerContent.Mixed)
+
+    #oc.add(DirectoryObject(
+    #    key = Callback(Artists),
+    #    title = L("library_artists")
+    #))
+
+    #oc.add(DirectoryObject(
+    #    key = Callback(Albums),
+    #    title = L("library_albums")
+    #))
+
+    oc.add(DirectoryObject(
+        key = Callback(Songs, lid=lid),
+        title = L("library_songs")
+    ))
+
+    oc.add(DirectoryObject(
+        key = Callback(Genres, lid=lid),
+        title = L("library_genres")
+    ))
+
+    return oc
+
+
+@route(PREFIX + "/library/artists")
 def Artists():
     oc = ObjectContainer(
         title2=L("artists"),
@@ -122,7 +134,7 @@ def Artists():
         view_group="artist_list"
     )
 
-    artists = library.get_artists()
+    artists = music.get_artists()
     for artist in smart_sort(artists):
         oc.add(ArtistObject(
             key = Callback(Artist, artistId=artist.id),
@@ -138,7 +150,6 @@ def track_object(track):
     return TrackObject(
         url = track.url,
         title = track.title,
-        index = track.index,
         artist = track.album.artist.name,
         album = track.album.name,
         duration = track.duration,
@@ -155,7 +166,7 @@ def album_object(album):
         duration = reduce(lambda a, t: a + t.duration, album.tracks, 0)
     )
 
-@route(PREFIX + "/albums")
+@route(PREFIX + "/library/albums")
 def Albums():
     oc = ObjectContainer(
         title2=L("albums"),
@@ -163,14 +174,16 @@ def Albums():
         view_group="album_list"
     )
 
-    albums = library.get_albums()
+    albums = music.get_albums()
     for album in smart_sort(albums):
         oc.add(album_object(album))
 
     return oc
 
-@route(PREFIX + "/songs")
-def Songs():
+@route(PREFIX + "/{lid}/library/songs")
+def Songs(lid):
+    library = music.get_library(lid)
+
     oc = ObjectContainer(
         title2=L("songs"),
         content=ContainerContent.Tracks,
@@ -183,8 +196,10 @@ def Songs():
 
     return oc
 
-@route(PREFIX + "/genres")
-def Genres():
+@route(PREFIX + "/{lid}/library/genres")
+def Genres(lid):
+    library = music.get_library(lid)
+
     oc = ObjectContainer(
         title2=L("genres"),
         content=ContainerContent.Genres
@@ -203,11 +218,12 @@ def Genres():
 
 @route(PREFIX + "/genre")
 def GenreTracks(genreId):
-    genre = library.get_genre(genreId)
+    genre = music.get_genre(genreId)
 
     oc = ObjectContainer(
         title2=genre.name,
-        content=ContainerContent.Tracks
+        content=ContainerContent.Tracks,
+        art=genre.thumb,
     )
 
     tracks = genre.tracks
@@ -218,7 +234,7 @@ def GenreTracks(genreId):
 
 @route(PREFIX + "/artist")
 def Artist(artistId):
-    artist = library.get_artist(artistId)
+    artist = music.get_artist(artistId)
 
     oc = ObjectContainer(
         title2=artist.name,
@@ -234,7 +250,7 @@ def Artist(artistId):
 
 @route(PREFIX + "/album")
 def Album(albumId):
-    album = library.get_album(albumId)
+    album = music.get_album(albumId)
 
     oc = ObjectContainer(
         title2=album.name,
@@ -243,7 +259,7 @@ def Album(albumId):
         art=album.thumb
     )
 
-    for track in sorted(album.tracks, library.track_cmp):
+    for track in sorted(album.tracks, music.track_cmp):
         oc.add(track_object(track))
 
     return oc
