@@ -5,3 +5,5 @@ Contents/Libraries/Shared/darwin-64bit
 .platform
 *.pyc
 *.pickle
+*.sublime-project
+*.sublime-workspace

@@ -31,8 +31,6 @@ def get_item_for_url(url):
     id = parts.path
     args = parse_qs(parts.query)
 
-    logger.debug("Requested metadata for %s" % id)
-
     if "u" in args:
         lid = args["u"]
     else:
@@ -43,15 +41,17 @@ def get_item_for_url(url):
     if item is None:
         logger.warn("Couldn't find an object for id '%s'" % id)
 
-    return item
+    return (library, item)
 
 def MetadataObjectForURL(url):
-    item = get_item_for_url(url)
+    logger.debug("Requested metadata for %s" % url)
+
+    (library, item) = get_item_for_url(url)
     if item is None:
         return None
 
     if isinstance(item, music.Album):
-        return MetadataObjectForAlbum(item)
+        return MetadataObjectForAlbum(library, item)
     if isinstance(item, music.Artist):
         return MetadataObjectForArtist(item)
     if isinstance(item, music.Track):
@@ -61,23 +61,30 @@ def MetadataObjectForURL(url):
     return None
 
 def MediaObjectsForURL(url):
-    item = get_item_for_url(url)
-    if item is None:
-        return None
+    logger.debug("Requested media objects for %s" % url)
+    try:
 
-    if isinstance(item, music.Album):
-        return MediaObjectsForAlbum(item)
-    if isinstance(item, music.Artist):
-        return MediaObjectsForArtist(item)
-    if isinstance(item, music.Track):
-        return MediaObjectsForTrack(item)
+        (library, item) = get_item_for_url(url)
+        if item is None:
+            return None
 
-    logger.warn("Unknown object type for id '%s'" % id)
-    return []
+        if isinstance(item, music.Album):
+            return MediaObjectsForAlbum(item)
+        if isinstance(item, music.Artist):
+            return MediaObjectsForArtist(item)
+        if isinstance(item, music.Track):
+            logger.debug("Returning track object")
+            return MediaObjectsForTrack(library, item)
 
-def MetadataObjectForAlbum(album):
+        logger.warn("Unknown object type for id '%s'" % id)
+        return []
+    except:
+        logger.exception("Failed")
+        return []
+
+def MetadataObjectForAlbum(library, album):
     return AlbumObject(
-        key = Callback(Tracks, albumId = album.id),
+        key = Callback(Tracks, libraryId = library.id, albumId = album.id),
         title = album.name,
         art = album.thumb,
         thumb = album.thumb,
@@ -91,26 +98,25 @@ def MetadataObjectForTrack(track):
         artist = track.album.artist.name,
         album = track.album.name,
         duration = track.duration,
-        thumb = track.thumb
+        thumb = track.thumb,
+        url = track.url
     )
 
 def MediaObjectsForAlbum(album):
     return None
 
-def MediaObjectsForTrack(track):
-    return [
+def MediaObjectsForTrack(library, track):
+    media = [
         MediaObject(
-            bitrate = 320,
             container = Container.MP3,
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, trackId = track.id, quality = "hi"),
+                key = Callback(TrackStream, trackId = track.id, libraryId = library.id, quality = "hi"),
                 duration = track.duration,
                 streams = [
                     AudioStreamObject(
                         selected = 1,
-                        bitrate = 320,
                         codec = AudioCodec.MP3,
                         duration = track.duration
                     )
@@ -118,6 +124,8 @@ def MediaObjectsForTrack(track):
             )]
         )
     ]
+    logger.debug("Returning %d media objects" % len(media))
+    return media
 
 def Tracks(albumId):
     album = music.get_album(albumId)
@@ -130,7 +138,8 @@ def Tracks(albumId):
     return oc
 
 
-def TrackStream(trackId, quality):
-    track = music.get_track(trackId)
+def TrackStream(libraryId, trackId, quality):
+    logger.debug("Attempt to stream %s %d" % (libraryId, trackId))
+    track = music.get_library(libraryId).get_track(trackId)
 
     return Redirect(track.get_stream_url(quality))

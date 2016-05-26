@@ -335,6 +335,9 @@ class Library(object):
     def get_tracks(self):
         return self.track_by_id.values()
 
+    def get_tracks_in_genre(self, genre):
+        return filter(lambda t: t.genre == genre, self.get_tracks())
+
     def get_track(self, any_id):
         if any_id in self.track_by_nid:
             return self.track_by_nid[any_id]
@@ -343,11 +346,7 @@ class Library(object):
         return None
 
     def get_genres(self):
-        genres = set(map(lambda t: t.genre, self.get_tracks()))
-        return map(lambda g: self.genre_by_name[g], genres)
-
-    def get_genre(self, name):
-        return self.genre_by_name[name]
+        return set(map(lambda t: t.genre, self.get_tracks()))
 
 class FakeGenre(object):
     name = None
@@ -557,3 +556,6 @@ def refresh():
 
 def get_library(id):
     return main
+
+def get_genre(name):
+    return genre_by_name[name]

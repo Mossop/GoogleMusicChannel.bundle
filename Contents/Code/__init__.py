@@ -57,6 +57,11 @@ logger.setLevel(logging.DEBUG)
 
 logger = logging.getLogger("googlemusicchannel.channel")
 
+def url_or_default(url, default):
+    if url is not None:
+        return url
+    return default
+
 def refresh():
     data = music.refresh()
     #Data.SaveObject(DB_NAME, data)
@@ -94,7 +99,8 @@ def Main():
 
     oc.add(DirectoryObject(
         key = Callback(Library, lid=0),
-        title = L("library")
+        title = L("library"),
+        thumb = R("album.png")
     ))
 
     return oc
@@ -115,12 +121,14 @@ def Library(lid):
 
     oc.add(DirectoryObject(
         key = Callback(Songs, lid=lid),
-        title = L("library_songs")
+        title = L("library_songs"),
+        thumb = R("playlist.png")
     ))
 
     oc.add(DirectoryObject(
         key = Callback(Genres, lid=lid),
-        title = L("library_genres")
+        title = L("library_genres"),
+        thumb = R("playlist.png")
     ))
 
     return oc
@@ -131,7 +139,7 @@ def Artists():
     oc = ObjectContainer(
         title2=L("artists"),
         content=ContainerContent.Artists,
-        view_group="artist_list"
+        view_group="artist_list",
     )
 
     artists = music.get_artists()
@@ -140,8 +148,8 @@ def Artists():
             key = Callback(Artist, artistId=artist.id),
             rating_key = artist.id,
             title = artist.name,
-            art = artist.art,
-            thumb = artist.thumb
+            art = url_or_default(artist.art, R("playlist.png")),
+            thumb = url_or_default(artist.thumb, R("playlist.png"))
         ))
 
     return oc
@@ -153,15 +161,14 @@ def track_object(track):
         artist = track.album.artist.name,
         album = track.album.name,
         duration = track.duration,
-        thumb = track.thumb
+        thumb = url_or_default(track.thumb, R("track.png"))
     )
 
 def album_object(album):
     return PlaylistObject(
         key = Callback(Album, albumId=album.id),
         title = album.name,
-        art = album.thumb,
-        thumb = album.thumb,
+        thumb = url_or_default(album.thumb, R("album.png")),
         tagline = album.artist.name,
         duration = reduce(lambda a, t: a + t.duration, album.tracks, 0)
     )
@@ -208,7 +215,7 @@ def Genres(lid):
     genres = library.get_genres()
     for genre in genres:
         oc.add(DirectoryObject(
-            key = Callback(GenreTracks, genreId = genre.id),
+            key = Callback(GenreTracks, genreName = genre.name, lid = lid),
             title = genre.name,
             art = genre.thumb,
             thumb = genre.thumb
@@ -216,17 +223,17 @@ def Genres(lid):
 
     return oc
 
-@route(PREFIX + "/genre")
-def GenreTracks(genreId):
-    genre = music.get_genre(genreId)
+@route(PREFIX + "/{lid}/genre")
+def GenreTracks(lid, genreName):
+    library = music.get_library(lid)
+    genre = music.get_genre(genreName)
 
     oc = ObjectContainer(
         title2=genre.name,
         content=ContainerContent.Tracks,
-        art=genre.thumb,
     )
 
-    tracks = genre.tracks
+    tracks = library.get_tracks_in_genre(genre)
     for track in tracks:
         oc.add(track_object(track))
 
@@ -239,8 +246,7 @@ def Artist(artistId):
     oc = ObjectContainer(
         title2=artist.name,
         content=ContainerContent.Albums,
-        view_group="album_list",
-        art=artist.thumb
+        view_group="album_list"
     )
 
     for album in artist.albums:
@@ -256,7 +262,6 @@ def Album(albumId):
         title2=album.name,
         content=ContainerContent.Tracks,
         view_group="track_list",
-        art=album.thumb
     )
 
     for track in sorted(album.tracks, music.track_cmp):
