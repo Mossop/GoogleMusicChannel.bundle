@@ -105,7 +105,8 @@ class Library(object):
         self.clear()
 
         self.artist_by_id[""] = Artist(self, {
-            "name": "Various Artists"
+            "name": "Various Artists",
+            "artistId": ""
         })
 
         self.client = Mobileclient(False, False, True)
@@ -190,7 +191,9 @@ class Library(object):
 
         if album.name != expectedName:
             logger.warning("Failed to find correct album %s" % (expectedName))
-            return
+            return None
+
+        return album
 
     def add_track(self, track_data):
         id = track_data["id"]
@@ -207,7 +210,10 @@ class Library(object):
 
         self.track_by_id[id] = track
 
-        self.find_album(track_data["albumId"], track_data["album"])
+        album = self.find_album(track_data["albumId"], track_data["album"])
+
+        if album is not None:
+            track.albumId = album.id
 
 #        album_hash = get_album_hash(track_data["albumArtist"], track_data["album"])
 #        album = self.albums.get(album_hash)#
@@ -332,8 +338,14 @@ class Library(object):
     def get_album(self, id):
         return self.album_by_id[id]
 
+    def get_albums_by_artist(self, artist):
+        return filter(lambda a: a.artist == artist, self.get_albums())
+
     def get_tracks(self):
         return self.track_by_id.values()
+
+    def get_tracks_in_album(self, album):
+        return filter(lambda t: t.album == album, self.get_tracks())
 
     def get_tracks_in_genre(self, genre):
         return filter(lambda t: t.genre == genre, self.get_tracks())
@@ -393,11 +405,17 @@ class Artist(object):
 
     # Public API
     @property
+    def id(self):
+        return self.data["artistId"]
+
+    @property
     def name(self):
         return self.data["name"]
 
     @property
     def thumb(self):
+        if "artistArtRef" in self.data:
+            return self.data["artistArtRef"]
         return None
 
     @property
@@ -418,6 +436,10 @@ class Album(object):
         self.data = data
 
     # Public API
+    @property
+    def id(self):
+        return self.data["albumId"]
+
     @property
     def name(self):
         return self.data["name"]
@@ -441,6 +463,7 @@ class Album(object):
 class Track(object):
     library = None
     data = None
+    albumId = None
 
     def __init__(self, library, data):
         self.library = library
@@ -476,8 +499,12 @@ class Track(object):
         return None
 
     @property
+    def artist(self):
+        return self.album.artist
+
+    @property
     def album(self):
-        return self.library.album_by_id[self.data["albumId"]]
+        return self.library.album_by_id[self.albumId]
 
     @property
     def genre(self):
