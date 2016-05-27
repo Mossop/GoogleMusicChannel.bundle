@@ -28,7 +28,7 @@ sys.path.append(platfom_path)
 
 from gmusicapi import Mobileclient
 
-DB_SCHEMA = 2
+DB_SCHEMA = 5
 
 logger = logging.getLogger("googlemusicchannel.library")
 
@@ -65,11 +65,6 @@ root_genres = []
 genre_by_id = {}
 genre_by_name = {}
 
-def replace_genres(root, by_id, by_name):
-    root_genres = root
-    genre_by_id = by_id
-    genre_by_name = by_name
-
 # We need at least one Library in order to have a valid client
 class Library(object):
     id = None
@@ -85,12 +80,6 @@ class Library(object):
     artist_by_id = None
     album_by_id = None
     track_by_nid = None
-
-    # Where there isn't a real artist object this holds fake artist entries
-    artist_by_name = None
-
-    # Where there isn't a real album object this holds fake album entries
-    album_by_name = None
 
     # These are all the tracks in the user's library. The key is the track's
     # library ID, not the store ID
@@ -127,6 +116,9 @@ class Library(object):
             "username": self.username,
             "password": self.password,
             "device_id": self.device_id,
+            "tracks": map(lambda t: t.pickle(), self.track_by_id.values()),
+            "albums": map(lambda a: a.pickle(), self.album_by_id.values()),
+            "artists": map(lambda a: a.pickle(), self.artist_by_id.values())
         }
 
     def logout(self):
@@ -139,6 +131,13 @@ class Library(object):
             library.device_id = data["device_id"]
 
             library.clear()
+
+            for d in data["tracks"]:
+                Track.unpickle(library, d)
+            for d in data["albums"]:
+                Album.unpickle(library, d)
+            for d in data["artists"]:
+                Artist.unpickle(library, d)
 
             return library
         except:
@@ -215,44 +214,6 @@ class Library(object):
         if album is not None:
             track.albumId = album.id
 
-#        album_hash = get_album_hash(track_data["albumArtist"], track_data["album"])
-#        album = self.albums.get(album_hash)#
-
-#        if album is None:
-#            album = Album(self, {
-#                "albumArtist": track_data["albumArtist"],
-#                "name": track_data["album"]
-#            })#
-
-#            artist = self.artists.get(track_data["albumArtist"])
-#            if artist is None:
-#                artist = Artist(self, {
-#                    "name": track_data["albumArtist"]
-#                })#
-
-#            album.artist = artist
-#            artist.albums.add(album)#
-
-#        album.tracks.add(track)
-#        track.album = album#
-
-#        # Attempt to get full album data if needed
-#        if "albumId" in track_data:
-#            album.update_id(track_data["albumId"])#
-
-#        # Add whatever album art we have
-#        if "albumArtRef" in track_data:
-#            album.art.add(track_data["albumArtRef"][0]["url"])#
-
-#        # If the main artist is the album artist then do the same for the
-#        # artist
-#        if track_data["albumArtist"] == track_data["artist"]:
-#            if "artistId" in track_data and len(track_data["artistId"]) > 0:
-#                album.artist.update_id(track_data["artistId"][0])#
-
-#            if "artistArtRef" in track_data:
-#                album.artist.art.add(track_data["artistArtRef"][0]["url"])#
-
     def remove_track(self, id):
         del self.tracks[id]
 
@@ -261,8 +222,6 @@ class Library(object):
         self.album_by_id = {}
         self.track_by_nid = {}
         
-        self.artist_by_name = {}
-        self.album_by_name = {}
         self.track_by_id = {}
 
     def update(self):
@@ -291,23 +250,25 @@ class Library(object):
             for id in addedset:
                 self.add_track(tracks[id])
 
+            logger.info("Updating %d existing tracks." % (len(modifiedset)))
+
+            for id in modifiedset:
+                self.add_track(tracks[id])
+
             logger.info("Removing %d old tracks." % (len(deletedset)))
 
             for id in deletedset:
                 self.remove_track(id)
 
-            logger.info("Updating %d existing tracks." % (len(modifiedset)))
+            albumIds = set(map(lambda t: t.albumId, self.track_by_id.values()))
+            removed_albums = set(self.album_by_id.keys()) - albumIds
+            for albumId in removed_albums:
+                del self.album_by_id[albumId]
 
-            for id in modifiedset:
-                current = self.tracks[id]
-                new = tracks[id]
-
-                self.remove_track(id)
-                self.add_track(new)
-
-            # TODO purge empty albums
-            # TODO purge empty artists
-            # TODO update genres
+            artistIds = set(map(lambda t: t.artistId, self.album_by_id.values()))
+            removed_artists = set(self.artist_by_id.keys()) - artistIds
+            for artistId in removed_artists:
+                del self.artist_by_id[artistId]
 
             albums = set(map(lambda t: t.album, self.track_by_id.values()))
             artists = set(map(lambda a: a.artist, albums))
@@ -319,11 +280,15 @@ class Library(object):
 
     def get_item(self, id):
         if id[0] == "A":
-            return self.get_artist(urllib.unquote(id[1:]))
+            return self.get_artist(id)
         if id[0] == "B":
             return self.get_album(id)
         if id[0] == "F":
-            return self.get_album(id[1:])
+            if id[1] == "A":
+                return self.get_artist(id[2:])
+            if id[1] == "B":
+                return self.get_album(id[2:])
+            return None
         return self.get_track(id)
 
     def get_artists(self):
@@ -368,6 +333,11 @@ class FakeGenre(object):
         self.name = name
         self.examples = []
 
+    def pickle(self):
+        return {
+            "name": self.name
+        }
+
     @property
     def thumb(self):
         tracks = filter(lambda t: t.album.thumb is not None, self.examples)
@@ -377,14 +347,35 @@ class FakeGenre(object):
 
 class Genre(object):
     data = None
-    library = None
     children = None
 
     def __init__(self, data):
         self.data = data
         self.children = []
 
+    @classmethod
+    def unpickle(cls, data):
+        if "data" in data:
+            genre = cls(data["data"])
+            genre.children = map(lambda d: Genre.unpickle(d), data["children"])
+            genre_by_id[genre.id] = genre
+        else:
+            genre = FakeGenre(data["name"])
+        genre_by_name[genre.name] = genre
+
+        return genre
+
+    def pickle(self):
+        return {
+            "data": self.data,
+            "children": map(lambda g: g.pickle(), self.children)
+        }
+
     # Public API
+    @property
+    def id(self):
+        return self.data["id"]
+
     @property
     def name(self):
         return self.data["name"]
@@ -402,6 +393,17 @@ class Artist(object):
     def __init__(self, library, data):
         self.library = library
         self.data = data
+
+    @classmethod
+    def unpickle(cls, library, data):
+        artist = cls(library, data["data"])
+        library.artist_by_id[artist.id] = artist
+        return artist
+
+    def pickle(self):
+        return {
+            "data": self.data
+        }
 
     # Public API
     @property
@@ -434,6 +436,19 @@ class Album(object):
     def __init__(self, library, data):
         self.library = library
         self.data = data
+
+    @classmethod
+    def unpickle(cls, library, data):
+        album = cls(library, data["data"])
+        album.artistId = data["artistId"]
+        library.album_by_id[album.id] = album
+        return album
+
+    def pickle(self):
+        return {
+            "data": self.data,
+            "artistId": self.artistId
+        }
 
     # Public API
     @property
@@ -478,6 +493,21 @@ class Track(object):
             genre.examples.append(self)
             genre_by_name[data["genre"]] = genre
             root_genres.append(genre)
+
+    @classmethod
+    def unpickle(cls, library, data):
+        track = cls(library, data["data"])
+        track.albumId = data["albumId"]
+        library.track_by_id[track.lid] = track
+        if track.nid is not None:
+            library.track_by_nid[track.nid] = track
+        return track
+
+    def pickle(self):
+        return {
+            "data": self.data,
+            "albumId": self.albumId
+        }
 
     # Public API
     @property
@@ -524,13 +554,9 @@ class Track(object):
 
     @property
     def url(self):
-        if "nid" in self.data:
-            id = self.data["nid"]
-        else:
-            id = self.data["id"]
         param = urlize("%s - %s" % (self.title, self.album.artist.name))
 
-        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (id, param, self.library.id)
+        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
 
 main = None
 
@@ -539,6 +565,9 @@ def load_from(data):
 
     if data["schema"] != DB_SCHEMA:
         return
+
+    root_genres = map(lambda data: Genre.unpickle(data), data["genres"])
+    main = Library.unpickle(data["libraries"][0])
 
 def set_credentials(username, password):
     global main
@@ -561,25 +590,31 @@ def refresh():
     logger.info("Updating genres.")
 
     g_root = []
-    g_by_id = {}
-    g_by_name = {}
 
     def find_genres(parent, list):
         genres = library.client.get_genres(parent)
         for data in genres:
             genre = Genre(data)
             list.append(genre)
-            g_by_id[data["id"]] = genre
-            g_by_name[genre.name] = genre
+            genre_by_id[data["id"]] = genre
+            genre_by_name[genre.name] = genre
 
             find_genres(data["id"], genre.children)
 
     find_genres(None, g_root)
-    replace_genres(g_root, g_by_id, g_by_name)
+    root_genres = g_root
 
-    logger.info("Found %d genres." % (len(g_by_id)))
+    logger.info("Found %d genres." % (len(genre_by_id)))
 
     main.update()
+
+    # TODO Clear out unused genres in genre_by_id and genre_by_name
+
+    return {
+        "schema": DB_SCHEMA,
+        "genres": map(lambda g: g.pickle(), root_genres),
+        "libraries": [main.pickle()]
+    }
 
 def get_library(id):
     return main

@@ -64,7 +64,7 @@ def url_or_default(url, default):
 
 def refresh():
     data = music.refresh()
-    #Data.SaveObject(DB_NAME, data)
+    Data.SaveObject(DB_NAME, data)
 
     Thread.CreateTimer(60 * 10, refresh)
 
@@ -76,7 +76,7 @@ def Start():
     if Data.Exists(DB_NAME):
         try:
             data = Data.LoadObject(DB_NAME)
-            #music.load_from(data)
+            music.load_from(data)
         except:
             logger.exception("Failed to load initial data.")
 
