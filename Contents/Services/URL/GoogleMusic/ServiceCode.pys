@@ -25,18 +25,21 @@ base_path = 'https://play.google.com/music/m/'
 def get_item_for_url(url):
     if url[0:len(base_path)] != base_path:
         logger.warn("Failed to match url '%s'" % url)
-        return None
+        return None, None
 
     parts = urlsplit(url[len(base_path):])
     id = parts.path
     args = parse_qs(parts.query)
 
     if "u" in args:
-        lid = args["u"]
+        lid = int(args["u"][0])
     else:
         lid = 0
 
     library = music.get_library(lid)
+    if library is None:
+        logger.warn("Couldn't find a library for id '%d'" % lid)
+        return None, None
     item = library.get_item(id)
     if item is None:
         logger.warn("Couldn't find an object for id '%s'" % id)
@@ -73,7 +76,6 @@ def MediaObjectsForURL(url):
         if isinstance(item, music.Artist):
             return MediaObjectsForArtist(item)
         if isinstance(item, music.Track):
-            logger.debug("Returning track object")
             return MediaObjectsForTrack(library, item)
 
         logger.warn("Unknown object type for id '%s'" % id)
@@ -106,7 +108,7 @@ def MediaObjectsForAlbum(album):
     return None
 
 def MediaObjectsForTrack(library, track):
-    media = [
+    return [
         MediaObject(
             container = Container.MP3,
             audio_codec = AudioCodec.MP3,
@@ -124,8 +126,6 @@ def MediaObjectsForTrack(library, track):
             )]
         )
     ]
-    logger.debug("Returning %d media objects" % len(media))
-    return media
 
 def Tracks(albumId):
     album = music.get_album(albumId)
