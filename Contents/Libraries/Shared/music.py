@@ -28,7 +28,7 @@ sys.path.append(platfom_path)
 
 from gmusicapi import Mobileclient
 
-DB_SCHEMA = 5
+DB_SCHEMA = 1
 
 logger = logging.getLogger("googlemusicchannel.library")
 
@@ -159,25 +159,70 @@ class Library(object):
 
         raise Exception("Unable to find a valid device ID")
 
+    def add_fake_artist(self, track_data):
+        artist = self.get_artist_by_name(track_data["albumArtist"])
+        if artist is None:
+            artist_data = {
+                "artistId": "FA%s" % hash(track_data["albumArtist"]),
+                "name": track_data["albumArtist"],
+            }
+
+            if "artistArtRef" in track_data:
+                artist_data["artistArtRef"] = track_data["artistArtRef"][0]["url"]
+            elif "albumArtRef" in track_data:
+                artist_data["artistArtRef"] = track_data["albumArtRef"][0]["url"]
+            else:
+                artist_data["artistArtRef"] = None
+
+            artist = Artist(self, artist_data)
+            self.artist_by_id[artist.id] = artist
+
+        return artist
+
     def find_artist(self, artistId, expectedName):
         if artistId in self.artist_by_id:
             artist = self.artist_by_id[artistId]
         else:
             artist_data = self.client.get_artist_info(artistId, False, 0, 0)
             artist = Artist(self, artist_data)
-            self.artist_by_id[artistId] = artist
+            self.artist_by_id[artist.id] = artist
 
         if artist.name == expectedName:
             return artist
         return None
 
-    def find_album(self, albumId, expectedName):
-        if albumId in self.album_by_id:
-            album = self.album_by_id[albumId]
-        else:
-            album_data = self.client.get_album_info(albumId, False)
+    def add_fake_album(self, track_data):
+        album = self.get_album_by_name(track_data["album"])
+        if album is None:
+            album_data = {
+                "albumId": "FB%s" % hash(track_data["album"]),
+                "name": track_data["album"]
+            }
+
+            if "albumArtRef" in track_data:
+                album_data["albumArtRef"] = track_data["artistArtRef"][0]["url"]
+            elif "artistArtRef" in track_data:
+                album_data["albumArtRef"] = track_data["albumArtRef"][0]["url"]
+            else:
+                album_data["albumArtRef"] = None
+
             album = Album(self, album_data)
-            self.album_by_id[albumId] = album
+            self.album_by_id[album.id] = album
+
+            artist = self.add_fake_artist(track_data)
+
+            album.artistId = artist.id
+
+        return album
+
+
+    def find_album(self, track_data):
+        if track_data["albumId"] in self.album_by_id:
+            album = self.album_by_id[track_data["albumId"]]
+        else:
+            album_data = self.client.get_album_info(track_data["albumId"], False)
+            album = Album(self, album_data)
+            self.album_by_id[album.id] = album
 
             for artistId in album_data["artistId"]:
                 artist = self.find_artist(artistId, album_data["albumArtist"])
@@ -187,32 +232,54 @@ class Library(object):
 
             if album.artistId is None:
                 logger.warn("Couldn't find an artist %s for %s" % (album_data["albumArtist"], album.name))
+                artist = self.add_fake_artist(track_data)
+                album.artistId = artist.id
 
-        if album.name != expectedName:
-            logger.warning("Failed to find correct album %s" % (expectedName))
+        if album.name != track_data["album"]:
+            logger.warning("Failed to find correct album %s" % (track_data["album"]))
             return None
 
         return album
 
+    # For tracks that were uploaded to google play. Album and artist IDs are
+    # sane. nid field is always present
     def add_track(self, track_data):
         id = track_data["id"]
 
-        if "nid" not in track_data:
-            return
+        if id in self.track_by_id:
+            old_track = self.track_by_id[id]
+            if old_track.nid is not None:
+                del self.track_by_nid[old_track.nid]
 
-        if "nid" in track_data and track_data["nid"] in self.track_by_nid:
+        if track_data["nid"] in self.track_by_nid:
             track = self.track_by_nid[track_data["nid"]]
         else:
             track = Track(self, track_data)
-            if "nid" in track_data:
-                self.track_by_nid[track_data["nid"]] = track
+            self.track_by_nid[track_data["nid"]] = track
 
+        album = self.find_album(track_data)
+
+        if album is None:
+            album = self.add_fake_album(track_data)
+
+        track.albumId = album.id
         self.track_by_id[id] = track
 
-        album = self.find_album(track_data["albumId"], track_data["album"])
+    # For tracks that were uploaded to google play. Album and artist IDs cannot
+    # be trusted. nid field is never present
+    def add_fake_track(self, track_data):
+        id = track_data["id"]
 
-        if album is not None:
-            track.albumId = album.id
+        if id in self.track_by_id:
+            old_track = self.track_by_id[id]
+            if old_track.nid is not None:
+                del self.track_by_nid[old_track.nid]
+
+        track = Track(self, track_data)
+        album = self.add_fake_album(track_data)
+
+        track.albumId = album.id
+        self.track_by_id[id] = track
 
     def remove_track(self, id):
         del self.tracks[id]
@@ -235,25 +302,21 @@ class Library(object):
             data = self.client.get_all_songs(False, False)
             logger.info("Found %d tracks in the cloud library." % (len(data)))
 
-            # Convert to a dict with id as key
-            tracks = dict(map(lambda s: (s["id"], s), data))
+            track_ids = set(map(lambda s: s["id"], data))
 
             currentset = set(self.track_by_id.keys())
-            newset = set(tracks.keys())
 
-            deletedset = currentset - newset
-            addedset = newset - currentset
-            modifiedset = currentset & newset
+            deletedset = currentset - track_ids
+            addedset = track_ids - currentset
+            modifiedset = currentset & track_ids
 
-            logger.info("Adding %d new tracks." % (len(addedset)))
+            logger.info("Adding %d new tracks and updating %d existing tracks." % (len(addedset), len(modifiedset)))
 
-            for id in addedset:
-                self.add_track(tracks[id])
+            for track_data in filter(lambda d: "nid" in d, data):
+                self.add_track(track_data)
 
-            logger.info("Updating %d existing tracks." % (len(modifiedset)))
-
-            for id in modifiedset:
-                self.add_track(tracks[id])
+            for track_data in filter(lambda d: "nid" not in d, data):
+                self.add_fake_track(track_data)
 
             logger.info("Removing %d old tracks." % (len(deletedset)))
 
@@ -297,11 +360,23 @@ class Library(object):
     def get_artist(self, id):
         return self.artist_by_id[id]
 
+    def get_artist_by_name(self, name):
+        artists = filter(lambda a: a.name == name, self.get_artists())
+        if len(artists) > 0:
+            return artists[0]
+        return None
+
     def get_albums(self):
         return set(map(lambda t: t.album, self.get_tracks()))
 
     def get_album(self, id):
         return self.album_by_id[id]
+
+    def get_album_by_name(self, name):
+        albums = filter(lambda a: a.name == name, self.get_albums())
+        if len(albums) > 0:
+            return albums[0]
+        return None
 
     def get_albums_by_artist(self, artist):
         return filter(lambda a: a.artist == artist, self.get_albums())
@@ -422,11 +497,9 @@ class Artist(object):
 
     @property
     def url(self):
-        id = "A%s" % urllib.quote(self.name)
-
         param = urlize("%s" % (self.name))
 
-        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (id, param, self.library.id)
+        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
 
 class Album(object):
     library = None
@@ -473,7 +546,7 @@ class Album(object):
     def url(self):
         param = urlize("%s - %s" % (self.name, self.artist.name))
 
-        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.data["albumId"], param, self.library.id)
+        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
 
 class Track(object):
     library = None
