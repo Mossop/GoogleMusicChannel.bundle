@@ -554,7 +554,7 @@ class Track(object):
 
     @property
     def url(self):
-        param = urlize("%s - %s" % (self.title, self.album.artist.name))
+        param = urlize("%s - %s" % (self.title, self.artist.name))
 
         return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
 

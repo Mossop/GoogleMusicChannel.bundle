@@ -110,15 +110,17 @@ def MediaObjectsForAlbum(album):
 def MediaObjectsForTrack(library, track):
     return [
         MediaObject(
+            bitrate = 320,
             container = Container.MP3,
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, trackId = track.id, libraryId = library.id, quality = "hi"),
+                key = Callback(TrackStream, trackId = track.id, quality = "hi"),
                 duration = track.duration,
                 streams = [
                     AudioStreamObject(
                         selected = 1,
+                        bitrate = 320,
                         codec = AudioCodec.MP3,
                         duration = track.duration
                     )
