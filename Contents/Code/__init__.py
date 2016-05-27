@@ -226,7 +226,7 @@ def LibraryGenres(lid):
 
     return oc
 
-@route(PREFIX + "/library/{lid}/genre")
+@route(PREFIX + "/library/{lid}/genre/{genreName}")
 def LibraryGenreTracks(lid, genreName):
     library = music.get_library(lid)
     genre = music.get_genre(genreName)
@@ -242,7 +242,7 @@ def LibraryGenreTracks(lid, genreName):
 
     return oc
 
-@route(PREFIX + "/library/{lid}/artist")
+@route(PREFIX + "/library/{lid}/artist/{artistId}")
 def LibraryArtist(lid, artistId):
     # Plex ignores empty strings
     if artistId is None:
@@ -263,7 +263,7 @@ def LibraryArtist(lid, artistId):
 
     return oc
 
-@route(PREFIX + "/library/{lid}/album")
+@route(PREFIX + "/library/{lid}/album/{albumId}")
 def LibraryAlbum(lid, albumId):
     library = music.get_library(lid)
     album = library.get_album(albumId)

@@ -115,7 +115,7 @@ def MediaObjectsForTrack(library, track):
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, trackId = track.id, quality = "hi"),
+                key = Callback(TrackStream, libraryId = library.id, trackId = track.id, quality = "hi"),
                 duration = track.duration,
                 streams = [
                     AudioStreamObject(
@@ -129,19 +129,21 @@ def MediaObjectsForTrack(library, track):
         )
     ]
 
-def Tracks(albumId):
-    album = music.get_album(albumId)
+def Tracks(libraryId, albumId):
+    library = music.get_library(libraryId)
+    album = library.get_album(albumId)
 
     oc = ObjectContainer()
 
-    for track in sorted(album.tracks, music.track_cmp):
+    for track in sorted(library.get_tracks_in_album(album), music.track_cmp):
         oc.add(MetadataObjectForTrack(track))
 
     return oc
 
 
 def TrackStream(libraryId, trackId, quality):
-    logger.debug("Attempt to stream %s %d" % (libraryId, trackId))
-    track = music.get_library(libraryId).get_track(trackId)
+    logger.debug("Attempt to stream")
+    library = music.get_library(libraryId)
+    track = library.get_track(trackId)
 
     return Redirect(track.get_stream_url(quality))

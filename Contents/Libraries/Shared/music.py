@@ -558,6 +558,10 @@ class Track(object):
 
         return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
 
+    def get_stream_url(self, quality):
+        device_id = self.library.get_device_id()
+        return self.library.client.get_stream_url(self.id, device_id, quality)
+
 main = None
 
 def load_from(data):
