@@ -40,6 +40,11 @@ class Track(object):
 
     @classmethod
     def unpickle(cls, library, data):
+        if data["albumId"] not in album_by_id:
+            logger.error("Refusing to unpickle track with no valid album (%s by %d)." %
+                         (data["title"], data["albumArtist"]))
+            return
+
         track = cls(library, data["data"])
         track.albumId = data["albumId"]
         return track

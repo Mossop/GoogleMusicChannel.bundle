@@ -31,6 +31,22 @@ class LibraryTrack(object):
         self.id = id
         self.track = track
         self.isfake = self.track.id[0] == "F"
+        library.track_by_id[id] = self
+
+    def pickle(self):
+        return {
+            "id": self.id,
+            "nid": self.track.id
+        }
+
+    @classmethod
+    def unpickle(cls, library, data):
+        if data["nid"] not in track_by_id:
+            logger.error("Refusing to unpickle library track with no valid track (%s)." % data["nid"])
+            return
+
+        track = track_by_id(data["nid"])
+        return LibraryTrack(library, data["id"], track)
 
     @property
     def artist(self):
@@ -100,13 +116,8 @@ class Library(object):
             "username": self.username,
             "password": self.password,
             "device_id": self.device_id,
-            #"tracks": map(lambda t: t.pickle(), self.track_by_id.values()),
-            #"albums": map(lambda a: a.pickle(), self.album_by_id.values()),
-            #"artists": map(lambda a: a.pickle(), self.artist_by_id.values())
+            "tracks": map(lambda t: t.pickle(), self.track_by_id.values())
         }
-
-    def logout(self):
-        self.client.logout()
 
     @classmethod
     def unpickle(cls, data):
@@ -116,15 +127,14 @@ class Library(object):
 
             library.clear()
 
-            #for d in data["tracks"]:
-            #    Track.unpickle(library, d)
-            #for d in data["albums"]:
-            #    Album.unpickle(library, d)
-            #for d in data["artists"]:
-            #    Artist.unpickle(library, d)
+            for d in data["tracks"]:
+                LibraryTrack.unpickle(self, d)
         except:
             logger.exception("Failed to load data.")
             return None
+
+    def logout(self):
+        self.client.logout()
 
     def get_device_id(self):
         if self.device_id is not None:
@@ -169,7 +179,7 @@ class Library(object):
                 lid = track_data["id"]
 
                 track = get_track_for_data(self.client, track_data)
-                self.track_by_id[lid] = LibraryTrack(self, lid, track)
+                LibraryTrack(self, lid, track)
 
             for track_data in filter(lambda d: "nid" in d, data):
                 add_track(track_data)

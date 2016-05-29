@@ -21,10 +21,13 @@ import re
 import urllib
 
 from genre import Genre
+from track import Track
+from album import Album
+from artist import Artist
 from library import Library
 from globals import *
 
-DB_SCHEMA = 111
+DB_SCHEMA = 1
 
 def load_from(data):
     if data["schema"] != DB_SCHEMA:
@@ -32,6 +35,12 @@ def load_from(data):
 
     for d in data["genres"]:
         Genre.unpickle(d)
+    for d in data["artists"]:
+        Artist.unpickle(library, d)
+    for d in data["albums"]:
+        Album.unpickle(library, d)
+    for d in data["tracks"]:
+        Track.unpickle(library, d)
     for l in data["libraries"]:
         Library.unpickle(l)
 
@@ -99,7 +108,10 @@ def refresh():
     return {
         "schema": DB_SCHEMA,
         "genres": map(lambda g: g.pickle(), root_genres),
-        "libraries": map(lambda l: l.pickle(), libraries.values())
+        "libraries": map(lambda l: l.pickle(), libraries.values()),
+        "tracks": map(lambda t: t.pickle(), track_by_id.values()),
+        "albums": map(lambda a: a.pickle(), album_by_id.values()),
+        "artists": map(lambda a: a.pickle(), artist_by_id.values())
     }
 
 def get_library(id):
