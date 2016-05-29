@@ -2,5 +2,6 @@
 
 cd %~dp0\..
 setlocal
-set PYTHONPATH=Contents\Libraries\Shared;C:\Program Files (x86)\Plex\Plex Media Server\DLLs
+
+set PYTHONPATH=%~dp0\..\Contents\Libraries\Shared
 "C:\Program Files (x86)\Plex\Plex Media Server\PlexScriptHost.exe"
