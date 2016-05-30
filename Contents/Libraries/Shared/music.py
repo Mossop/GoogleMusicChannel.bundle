@@ -15,10 +15,9 @@
 import logging
 logger = logging.getLogger("googlemusicchannel.music")
 
-import pathset
+from urlparse import urlsplit, parse_qs
 
-import re
-import urllib
+import pathset
 
 from genre import Genre
 from track import Track
@@ -36,11 +35,11 @@ def load_from(data):
     for d in data["genres"]:
         Genre.unpickle(d)
     for d in data["artists"]:
-        Artist.unpickle(library, d)
+        Artist.unpickle(d)
     for d in data["albums"]:
-        Album.unpickle(library, d)
+        Album.unpickle(d)
     for d in data["tracks"]:
-        Track.unpickle(library, d)
+        Track.unpickle(d)
     for l in data["libraries"]:
         Library.unpickle(l)
 
@@ -65,7 +64,7 @@ def refresh():
     g_root = []
 
     def find_genres(parent, list):
-        genres = libraries[0].client.get_genres(parent)
+        genres = libraries.values()[0].client.get_genres(parent)
         for data in genres:
             genre = Genre(data)
             list.append(genre)
@@ -115,7 +114,38 @@ def refresh():
     }
 
 def get_library(id):
-    return globals.libraries[id]
+    return libraries[int(id)]
 
 def get_genre(name):
-    return globals.genre_by_name[name]
+    return genre_by_name[name]
+
+def get_artist(id):
+    return artist_by_id[id]
+
+def get_album(id):
+    return album_by_id[id]
+
+def get_item_for_url(url):
+    if url[0:len(base_path)] != base_path:
+        raise Exception("Failed to match url '%s'" % url)
+
+    parts = urlsplit(url[len(base_path):])
+    id = parts.path
+    args = parse_qs(parts.query)
+
+    if "u" in args:
+        lid = int(args["u"][0])
+        if not lid in libraries:
+            raise Exception("Couldn't find a library for id '%d'" % lid)
+        library = get_library(lid)
+        if id in library.track_by_id:
+            return library.track_by_id[id]
+
+    if id in artist_by_id:
+        return artist_by_id[id]
+    if id in album_by_id:
+        return album_by_id[id]
+    if id in track_by_id:
+        return track_by_id[id]
+
+    raise Exception("ID '%s' didn't match any known item." % id)

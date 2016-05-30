@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import hashlib
 from base64 import b64encode
 import logging
@@ -27,8 +28,3 @@ def get_album_hash(artist, name):
     # We use this has as the ID as it should be reasonably unique and freely
     # available in both track and album data
     return hash("%s:%s" % (artist, name))
-
-def track_cmp(a, b):
-    if a.data["discNumber"] != b.data["discNumber"]:
-        return a.data["discNumber"] - b.data["discNumber"]
-    return a.data["trackNumber"] - b.data["trackNumber"]

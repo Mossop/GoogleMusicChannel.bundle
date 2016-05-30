@@ -16,7 +16,7 @@ import logging
 logger = logging.getLogger("googlemusicchannel.artist")
 
 from globals import *
-from utils import hash
+from utils import hash, urlize
 
 class Artist(object):
     data = None
@@ -54,7 +54,7 @@ class Artist(object):
     def url(self):
         param = urlize("%s" % (self.name))
 
-        return "https://play.google.com/music/m/%s?t=%s" % (self.id, param)
+        return "%s%s?t=%s" % (base_path, self.id, param)
 
 various_artists = Artist({
     "artistId": "FA" + hash("Various Artists"),

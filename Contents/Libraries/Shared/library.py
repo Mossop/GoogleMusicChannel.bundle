@@ -17,6 +17,7 @@ logger = logging.getLogger("googlemusicchannel.library")
 
 from globals import *
 from track import get_track_for_data
+from utils import urlize
 
 from gmusicapi import Mobileclient
 
@@ -45,8 +46,13 @@ class LibraryTrack(object):
             logger.error("Refusing to unpickle library track with no valid track (%s)." % data["nid"])
             return
 
-        track = track_by_id(data["nid"])
+        track = track_by_id[data["nid"]]
         return LibraryTrack(library, data["id"], track)
+
+    def __cmp__(self, other):
+        if isinstance(other, LibraryTrack):
+            other = other.track
+        return self.track.__cmp__(other)
 
     @property
     def artist(self):
@@ -74,11 +80,9 @@ class LibraryTrack(object):
 
     @property
     def url(self):
-        if self.isfake:
-            param = urlize("%s - %s" % (self.title, self.artist.name))
+        param = urlize("%s - %s" % (self.title, self.artist.name))
 
-            return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
-        return self.track.url
+        return "%s%s?t=%s&u=%d" % (base_path, self.id, param, self.library.id)
 
 # We need at least one Library in order to have a valid client
 class Library(object):
@@ -128,7 +132,7 @@ class Library(object):
             library.clear()
 
             for d in data["tracks"]:
-                LibraryTrack.unpickle(self, d)
+                LibraryTrack.unpickle(library, d)
         except:
             logger.exception("Failed to load data.")
             return None
@@ -211,47 +215,22 @@ class Library(object):
         return self.get_track(id)
 
     def get_artists(self):
-        return set(map(lambda t: t.album.artist, self.get_tracks()))
-
-    def get_artist(self, id):
-        return self.artist_by_id[id]
-
-    def get_artist_by_name(self, name):
-        artists = filter(lambda a: a.name == name, self.get_artists())
-        if len(artists) > 0:
-            return artists[0]
-        return None
+        return set(map(lambda t: t.artist, self.get_tracks()))
 
     def get_albums(self):
         return set(map(lambda t: t.album, self.get_tracks()))
 
-    def get_album(self, id):
-        return self.album_by_id[id]
-
-    def get_album_by_name(self, name):
-        albums = filter(lambda a: a.name == name, self.get_albums())
-        if len(albums) > 0:
-            return albums[0]
-        return None
-
     def get_albums_by_artist(self, artist):
-        return filter(lambda a: a.artist == artist, self.get_albums())
+        return set(map(lambda t: t.album, filter(lambda t: t.artist == artist, self.get_tracks())))
 
     def get_tracks(self):
         return self.track_by_id.values()
 
     def get_tracks_in_album(self, album):
-        return filter(lambda t: t.album == album, self.get_tracks())
+        return sorted(filter(lambda t: t.album == album, self.get_tracks()))
 
     def get_tracks_in_genre(self, genre):
         return filter(lambda t: t.genre == genre, self.get_tracks())
-
-    def get_track(self, any_id):
-        if any_id in self.track_by_nid:
-            return self.track_by_nid[any_id]
-        if any_id in self.track_by_id:
-            return self.track_by_id[any_id]
-        return None
 
     def get_genres(self):
         return set(map(lambda t: t.genre, self.get_tracks()))

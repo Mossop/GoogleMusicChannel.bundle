@@ -2,6 +2,8 @@
 # are manually uploaded/created by individuals don't appear here, look in the
 # Library objects for those.
 
+base_path = 'https://play.google.com/music/m/'
+
 libraries = {}
 root_genres = []
 genre_by_id = {}

@@ -167,14 +167,6 @@ def track_object(track):
         thumb = url_or_default(track.thumb, R("track.png"))
     )
 
-def album_object(album):
-    return PlaylistObject(
-        key = Callback(LibraryAlbum, lid=album.library.id, albumId=album.id),
-        title = album.name,
-        thumb = url_or_default(album.thumb, R("album.png")),
-        tagline = album.artist.name
-    )
-
 @route(PREFIX + "/library/{lid}/albums")
 def LibraryAlbums(lid):
     library = music.get_library(lid)
@@ -187,7 +179,12 @@ def LibraryAlbums(lid):
 
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(album_object(album))
+        oc.add(PlaylistObject(
+            key = Callback(LibraryAlbum, lid=library.id, albumId=album.id),
+            title = album.name,
+            thumb = url_or_default(album.thumb, R("album.png")),
+            tagline = album.artist.name
+        ))
 
     return oc
 
@@ -249,7 +246,7 @@ def LibraryArtist(lid, artistId):
         artistId = ""
 
     library = music.get_library(lid)
-    artist = library.get_artist(artistId)
+    artist = music.get_artist(artistId)
     albums = library.get_albums_by_artist(artist)
 
     oc = ObjectContainer(
@@ -259,14 +256,19 @@ def LibraryArtist(lid, artistId):
     )
 
     for album in albums:
-        oc.add(album_object(album))
+        oc.add(PlaylistObject(
+            key = Callback(LibraryAlbum, lid=library.id, albumId=album.id),
+            title = album.name,
+            thumb = url_or_default(album.thumb, R("album.png")),
+            tagline = album.artist.name
+        ))
 
     return oc
 
 @route(PREFIX + "/library/{lid}/album/{albumId}")
 def LibraryAlbum(lid, albumId):
     library = music.get_library(lid)
-    album = library.get_album(albumId)
+    album = music.get_album(albumId)
     tracks = library.get_tracks_in_album(album)
 
     oc = ObjectContainer(
@@ -275,7 +277,7 @@ def LibraryAlbum(lid, albumId):
         view_group="track_list",
     )
 
-    for track in sorted(tracks, music.track_cmp):
+    for track in tracks:
         oc.add(track_object(track))
 
     return oc

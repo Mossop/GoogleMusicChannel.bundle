@@ -15,7 +15,7 @@
 import logging
 logger = logging.getLogger("googlemusicchannel.track")
 
-from utils import hash
+from utils import hash, urlize
 from album import get_album_for_track
 from globals import *
 from genre import FakeGenre
@@ -39,13 +39,13 @@ class Track(object):
             root_genres.append(genre)
 
     @classmethod
-    def unpickle(cls, library, data):
+    def unpickle(cls, data):
         if data["albumId"] not in album_by_id:
             logger.error("Refusing to unpickle track with no valid album (%s by %d)." %
                          (data["title"], data["albumArtist"]))
             return
 
-        track = cls(library, data["data"])
+        track = cls(data["data"])
         track.albumId = data["albumId"]
         return track
 
@@ -54,6 +54,14 @@ class Track(object):
             "data": self.data,
             "albumId": self.albumId
         }
+
+    def __cmp__(self, other):
+        if not isinstance(other, Track):
+            raise Exception("Cannot compare a Track to %s" % repr(other))
+
+        if self.data["discNumber"] != other.data["discNumber"]:
+            return self.data["discNumber"] - other.data["discNumber"]
+        return self.data["trackNumber"] - other.data["trackNumber"]
 
     # Public API
     @property
@@ -88,7 +96,7 @@ class Track(object):
     def url(self):
         param = urlize("%s - %s" % (self.title, self.artist.name))
 
-        return "https://play.google.com/music/m/%s?t=%s&u=%d" % (self.id, param, self.library.id)
+        return "%s%s?t=%s" % (base_path, self.id, param)
 
     def get_stream_url(self, quality):
         device_id = self.library.get_device_id()

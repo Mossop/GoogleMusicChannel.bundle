@@ -12,89 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
 import logging
-from urlparse import urlsplit, parse_qs
-
-import music
-
 logger = logging.getLogger("googlemusicchannel.service.url")
 
-base_path = 'https://play.google.com/music/m/'
-
-def get_item_for_url(url):
-    if url[0:len(base_path)] != base_path:
-        logger.warn("Failed to match url '%s'" % url)
-        return None, None
-
-    parts = urlsplit(url[len(base_path):])
-    id = parts.path
-    args = parse_qs(parts.query)
-
-    if "u" in args:
-        lid = int(args["u"][0])
-    else:
-        lid = 0
-
-    library = music.get_library(lid)
-    if library is None:
-        logger.warn("Couldn't find a library for id '%d'" % lid)
-        return None, None
-    item = library.get_item(id)
-    if item is None:
-        logger.warn("Couldn't find an object for id '%s'" % id)
-
-    return (library, item)
+from library import LibraryTrack
+import music
 
 def MetadataObjectForURL(url):
     logger.debug("Requested metadata for %s" % url)
 
-    (library, item) = get_item_for_url(url)
-    if item is None:
-        return None
+    item = music.get_item_for_url(url)
 
-    if isinstance(item, music.Album):
-        return MetadataObjectForAlbum(library, item)
-    if isinstance(item, music.Artist):
-        return MetadataObjectForArtist(item)
-    if isinstance(item, music.Track):
-        return MetadataObjectForTrack(item)
+    if isinstance(item, LibraryTrack):
+        return MetadataObjectForLibraryTrack(item)
 
-    logger.warn("Unknown object type for id '%s'" % id)
-    return None
+    raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 
 def MediaObjectsForURL(url):
     logger.debug("Requested media objects for %s" % url)
-    try:
 
-        (library, item) = get_item_for_url(url)
-        if item is None:
-            return None
+    item = music.get_item_for_url(url)
 
-        if isinstance(item, music.Album):
-            return MediaObjectsForAlbum(item)
-        if isinstance(item, music.Artist):
-            return MediaObjectsForArtist(item)
-        if isinstance(item, music.Track):
-            return MediaObjectsForTrack(library, item)
+    if isinstance(item, LibraryTrack):
+        return MediaObjectsForLibraryTrack(item)
 
-        logger.warn("Unknown object type for id '%s'" % id)
-        return []
-    except:
-        logger.exception("Failed")
-        return []
+    raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 
-def MetadataObjectForAlbum(library, album):
-    return AlbumObject(
-        key = Callback(Tracks, libraryId = library.id, albumId = album.id),
-        title = album.name,
-        art = album.thumb,
-        thumb = album.thumb,
-        artist = album.artist.name,
-        track_count = len(album.tracks)
-    )
-
-def MetadataObjectForTrack(track):
+def MetadataObjectForLibraryTrack(track):
     return TrackObject(
         title = track.title,
         artist = track.album.artist.name,
@@ -104,10 +48,7 @@ def MetadataObjectForTrack(track):
         url = track.url
     )
 
-def MediaObjectsForAlbum(album):
-    return None
-
-def MediaObjectsForTrack(library, track):
+def MediaObjectsForLibraryTrack(track):
     return [
         MediaObject(
             bitrate = 320,
@@ -115,7 +56,7 @@ def MediaObjectsForTrack(library, track):
             audio_codec = AudioCodec.MP3,
             duration = track.duration,
             parts = [PartObject(
-                key = Callback(TrackStream, libraryId = library.id, trackId = track.id, quality = "hi"),
+                key = Callback(LibraryTrackStream, libraryId = track.library.id, trackId = track.id, quality = "hi"),
                 duration = track.duration,
                 streams = [
                     AudioStreamObject(
@@ -129,19 +70,8 @@ def MediaObjectsForTrack(library, track):
         )
     ]
 
-def Tracks(libraryId, albumId):
-    library = music.get_library(libraryId)
-    album = library.get_album(albumId)
 
-    oc = ObjectContainer()
-
-    for track in sorted(library.get_tracks_in_album(album), music.track_cmp):
-        oc.add(MetadataObjectForTrack(track))
-
-    return oc
-
-
-def TrackStream(libraryId, trackId, quality):
+def LibraryTrackStream(libraryId, trackId, quality):
     logger.debug("Attempt to stream")
     library = music.get_library(libraryId)
     track = library.get_track(trackId)

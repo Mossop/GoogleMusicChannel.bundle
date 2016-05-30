@@ -17,6 +17,7 @@ logger = logging.getLogger("googlemusicchannel.album")
 
 from globals import *
 from artist import get_artist_for_album, get_artist_for_track
+from utils import hash, urlize
 
 class Album(object):
     data = None
@@ -66,7 +67,7 @@ class Album(object):
     def url(self):
         param = urlize("%s - %s" % (self.name, self.artist.name))
 
-        return "https://play.google.com/music/m/%s?t=%s" % (self.id, param)
+        return "%s%s?t=%s" % (base_path, self.id, param)
 
 def get_fake_album_for_track(client, track_data):
     # This is a fake track ID, make up an album if necessary
@@ -107,9 +108,10 @@ def get_real_album_for_track(client, track_data):
         logger.warn("Invalid album returned for %s." % track_data["album"])
         return get_fake_album_for_track(client, track_data)
 
-    artist = get_artist_for_album(client, album_data, track_data)
+    if album.artistId is None:
+        artist = get_artist_for_album(client, album_data, track_data)
+        album.artistId = artist.id
 
-    album.artistId = artist.id
     return album
 
 def get_album_for_track(client, track_data):
