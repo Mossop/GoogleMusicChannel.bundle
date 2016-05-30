@@ -146,13 +146,14 @@ def LibraryArtists(lid):
         title2=L("library_artists"),
         content=ContainerContent.Artists,
         view_group="artist_list",
+        art=R("artist.png")
     )
 
     artists = library.get_artists()
     for artist in smart_sort(artists):
         oc.add(ArtistObject(
             key = Callback(LibraryArtist, lid=lid, artistId=artist.id),
-            rating_key = "ARTIST_%s" % artist.id, # Necessary because Various Artists has an empty id
+            rating_key = artist.id,
             title = artist.name,
             thumb = url_or_default(artist.thumb, R("playlist.png"))
         ))
@@ -176,7 +177,8 @@ def LibraryAlbums(lid):
     oc = ObjectContainer(
         title2=L("library_albums"),
         content=ContainerContent.Playlists,
-        view_group="album_list"
+        view_group="album_list",
+        art=R("album.png")
     )
 
     albums = library.get_albums()
@@ -198,7 +200,8 @@ def LibrarySongs(lid):
     oc = ObjectContainer(
         title2=L("library_songs"),
         content=ContainerContent.Tracks,
-        view_group="track_list"
+        view_group="track_list",
+        art=R("playlist.png")
     )
 
     tracks = library.get_tracks()
@@ -213,7 +216,8 @@ def LibraryGenres(lid):
 
     oc = ObjectContainer(
         title2=L("library_genres"),
-        content=ContainerContent.Genres
+        content=ContainerContent.Genres,
+        art=R("playlist.png")
     )
 
     genres = library.get_genres()
@@ -221,7 +225,7 @@ def LibraryGenres(lid):
         oc.add(DirectoryObject(
             key = Callback(LibraryGenreTracks, genreName = genre.name, lid = lid),
             title = genre.name,
-            thumb = genre.thumb
+            thumb = url_or_default(genre.thumb, R("playlist.png"))
         ))
 
     return oc
@@ -234,6 +238,7 @@ def LibraryGenreTracks(lid, genreName):
     oc = ObjectContainer(
         title2=genre.name,
         content=ContainerContent.Tracks,
+        art=url_or_default(genre.thumb, R("playlist.png"))
     )
 
     tracks = library.get_tracks_in_genre(genre)
@@ -255,7 +260,8 @@ def LibraryArtist(lid, artistId):
     oc = ObjectContainer(
         title2=artist.name,
         content=ContainerContent.Albums,
-        view_group="album_list"
+        view_group="album_list",
+        art=url_or_default(artist.thumb, R("artist.png"))
     )
 
     for album in albums:
@@ -279,6 +285,7 @@ def LibraryAlbum(lid, albumId):
         title2=album.name,
         content=ContainerContent.Tracks,
         view_group="track_list",
+        art=url_or_default(album.thumb, R("album.png"))
     )
 
     for track in tracks:
