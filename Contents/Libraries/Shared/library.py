@@ -54,6 +54,10 @@ class LibraryTrack(object):
             other = other.track
         return self.track.__cmp__(other)
 
+    def get_stream_url(self, quality):
+        device_id = self.library.get_device_id()
+        return self.library.client.get_stream_url(self.id, device_id, quality)
+
     @property
     def artist(self):
         return self.track.artist

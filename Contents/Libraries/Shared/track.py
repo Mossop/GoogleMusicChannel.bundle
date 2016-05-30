@@ -98,9 +98,8 @@ class Track(object):
 
         return "%s%s?t=%s" % (base_path, self.id, param)
 
-    def get_stream_url(self, quality):
-        device_id = self.library.get_device_id()
-        return self.library.client.get_stream_url(self.id, device_id, quality)
+    def get_stream_url(self, client, device_id, quality):
+        return client.get_stream_url(self.id, device_id, quality)
 
 def get_track_for_data(client, track_data):
     del track_data["id"]
