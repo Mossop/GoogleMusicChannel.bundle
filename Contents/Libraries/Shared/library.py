@@ -82,7 +82,7 @@ class LibraryTrack(object):
     def url(self):
         param = urlize("%s - %s" % (self.title, self.artist.name))
 
-        return "%s%s?t=%s&u=%d" % (base_path, self.id, param, self.library.id)
+        return "%s%s?t=%s" % (base_path, self.id, param)
 
 # We need at least one Library in order to have a valid client
 class Library(object):

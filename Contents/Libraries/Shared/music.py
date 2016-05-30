@@ -26,7 +26,7 @@ from artist import Artist
 from library import Library
 from globals import *
 
-DB_SCHEMA = 1
+DB_SCHEMA = 2
 
 def load_from(data):
     if data["schema"] != DB_SCHEMA:
@@ -138,6 +138,10 @@ def get_item_for_url(url):
         if not lid in libraries:
             raise Exception("Couldn't find a library for id '%d'" % lid)
         library = get_library(lid)
+        if id in library.track_by_id:
+            return library.track_by_id[id]
+
+    for library in libraries.values():
         if id in library.track_by_id:
             return library.track_by_id[id]
 

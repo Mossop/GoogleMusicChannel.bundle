@@ -46,7 +46,6 @@ def MetadataObjectForLibraryTrack(track):
         artist = track.album.artist.name,
         album = track.album.name,
         duration = track.duration,
-        thumb = track.thumb,
         url = track.url
     )
 

@@ -166,8 +166,7 @@ def track_object(track):
         title = track.title,
         artist = track.artist.name,
         album = track.album.name,
-        duration = track.duration,
-        thumb = url_or_default(track.thumb, R("track.png"))
+        duration = track.duration
     )
 
 @route(PREFIX + "/library/{lid}/albums")
