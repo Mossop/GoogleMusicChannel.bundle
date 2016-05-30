@@ -57,6 +57,8 @@ logger.setLevel(logging.DEBUG)
 
 logger = logging.getLogger("googlemusicchannel.channel")
 
+music.bugfix_album(AlbumObject)
+
 def url_or_default(url, default):
     if url is not None:
         return url
@@ -179,11 +181,12 @@ def LibraryAlbums(lid):
 
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(PlaylistObject(
+        oc.add(AlbumObject(
             key = Callback(LibraryAlbum, lid=library.id, albumId=album.id),
+            rating_key = album.id,
             title = album.name,
             thumb = url_or_default(album.thumb, R("album.png")),
-            tagline = album.artist.name
+            artist = album.artist.name
         ))
 
     return oc
@@ -256,11 +259,12 @@ def LibraryArtist(lid, artistId):
     )
 
     for album in albums:
-        oc.add(PlaylistObject(
+        oc.add(AlbumObject(
             key = Callback(LibraryAlbum, lid=library.id, albumId=album.id),
+            rating_key = album.id,
             title = album.name,
             thumb = url_or_default(album.thumb, R("album.png")),
-            tagline = album.artist.name
+            artist = album.artist.name
         ))
 
     return oc

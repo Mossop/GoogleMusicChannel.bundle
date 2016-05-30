@@ -149,3 +149,9 @@ def get_item_for_url(url):
         return track_by_id[id]
 
     raise Exception("ID '%s' didn't match any known item." % id)
+
+# There is a bug in the Plex API that causes albums to return as <Object>
+# instead of <Directory> which breaks many clients.
+# http://forums.plex.tv/discussion/217791/albumobjects-dont-display-in-the-web-interface
+def bugfix_album(cls):
+    cls._model_class._template.xml_tag = "Directory"
