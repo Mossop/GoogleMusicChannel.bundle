@@ -155,3 +155,6 @@ def get_item_for_url(url):
 # http://forums.plex.tv/discussion/217791/albumobjects-dont-display-in-the-web-interface
 def bugfix_album(cls):
     cls._model_class._template.xml_tag = "Directory"
+
+def to_xml(item):
+    return item._to_xml()

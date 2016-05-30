@@ -284,4 +284,5 @@ def LibraryAlbum(lid, albumId):
     for track in tracks:
         oc.add(track_object(track))
 
+    logger.debug(XML.StringFromElement(music.to_xml(oc)))
     return oc
