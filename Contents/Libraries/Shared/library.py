@@ -205,19 +205,6 @@ class Library(object):
         except:
             logger.exception("Failed to update library.")
 
-    def get_item(self, id):
-        if id[0] == "A":
-            return self.get_artist(id)
-        if id[0] == "B":
-            return self.get_album(id)
-        if id[0] == "F":
-            if id[1] == "A":
-                return self.get_artist(id[2:])
-            if id[1] == "B":
-                return self.get_album(id[2:])
-            return None
-        return self.get_track(id)
-
     def get_artists(self):
         return set(map(lambda t: t.artist, self.get_tracks()))
 
@@ -238,3 +225,6 @@ class Library(object):
 
     def get_genres(self):
         return set(map(lambda t: t.genre, self.get_tracks()))
+
+    def get_track(self, trackId):
+        return self.track_by_id[trackId]
