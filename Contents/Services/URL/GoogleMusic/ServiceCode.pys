@@ -34,9 +34,7 @@ def MediaObjectsForURL(url):
     item = music.get_item_for_url(url)
 
     if isinstance(item, LibraryTrack):
-        objs = MediaObjectsForLibraryTrack(item)
-        logger.debug(XML.StringFromElement(music.to_xml(objs[0])))
-        return objs
+        return MediaObjectsForLibraryTrack(item)
 
     raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 

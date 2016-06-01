@@ -261,39 +261,15 @@ def Album(libraryId, albumId):
 
     return oc
 
-@route(PREFIX + "/track/play")
-def TrackStream(trackId, quality):
-    library = music.get_library(0)
-    track = library.get_track(trackId)
-    return Redirect(track.get_stream_url(quality))
-
 def track_object(track):
     obj = TrackObject(
-        key = PREFIX,
-        rating_key = track.id,
+        url = track.url,
         title = track.title,
         artist = track.artist.name,
         album = track.album.name,
         duration = track.duration,
         thumb = track.thumb
     )
-
-    obj.add(MediaObject(
-        bitrate = 320,
-        container = Container.MP3,
-        audio_codec = AudioCodec.MP3,
-        parts = [PartObject(
-            key = Callback(TrackStream, trackId = track.id, quality = "hi"),
-            duration = track.duration,
-            streams = [
-                AudioStreamObject(
-                    selected = 1,
-                    bitrate = 320,
-                    codec = AudioCodec.MP3,
-                )
-            ]
-        )]
-    ))
 
     return obj
 
