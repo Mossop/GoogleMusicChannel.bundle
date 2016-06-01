@@ -100,48 +100,46 @@ def Main():
     oc = ObjectContainer(content=ContainerContent.Mixed)
 
     oc.add(DirectoryObject(
-        key = Callback(Library, lid=0),
+        key = Callback(Library, libraryId = 0),
         title = L("library"),
-        thumb = R("album.png")
+        thumb = R("library.png")
     ))
 
     return oc
 
-@route(PREFIX + "/library/{lid}")
-def Library(lid):
+@route(PREFIX + "/glibrary")
+def Library(libraryId):
     oc = ObjectContainer(content=ContainerContent.Mixed, title2=L("library"))
 
     oc.add(DirectoryObject(
-        key = Callback(LibraryArtists, lid=lid),
+        key = Callback(LibraryArtists, libraryId = libraryId),
         title = L("library_artists"),
         thumb = R("artist.png")
     ))
 
     oc.add(DirectoryObject(
-        key = Callback(LibraryAlbums, lid=lid),
+        key = Callback(LibraryAlbums, libraryId = libraryId),
         title = L("library_albums"),
         thumb = R("album.png")
     ))
 
     oc.add(DirectoryObject(
-        key = Callback(LibrarySongs, lid=lid),
+        key = Callback(LibrarySongs, libraryId = libraryId),
         title = L("library_songs"),
-        thumb = R("playlist.png")
+        thumb = R("track.png")
     ))
 
     oc.add(DirectoryObject(
-        key = Callback(LibraryGenres, lid=lid),
+        key = Callback(LibraryGenres, libraryId = libraryId),
         title = L("library_genres"),
-        thumb = R("playlist.png")
+        thumb = R("genre.png")
     ))
 
     return oc
 
 
-@route(PREFIX + "/library/{lid}/artists")
-def LibraryArtists(lid):
-    library = music.get_library(lid)
-
+@route(PREFIX + "/glibrary/artists")
+def LibraryArtists(libraryId):
     oc = ObjectContainer(
         title2=L("library_artists"),
         content=ContainerContent.Artists,
@@ -149,30 +147,20 @@ def LibraryArtists(lid):
         art=R("artist.png")
     )
 
+    library = music.get_library(libraryId)
     artists = library.get_artists()
     for artist in smart_sort(artists):
         oc.add(ArtistObject(
-            key = Callback(LibraryArtist, lid=lid, artistId=artist.id),
+            key = Callback(LibraryArtist, libraryId=libraryId, artistId=artist.id),
             rating_key = artist.id,
             title = artist.name,
-            thumb = url_or_default(artist.thumb, R("playlist.png"))
+            thumb = url_or_default(artist.thumb, R("artist.png"))
         ))
 
     return oc
 
-def track_object(track):
-    return TrackObject(
-        url = track.url,
-        title = track.title,
-        artist = track.artist.name,
-        album = track.album.name,
-        duration = track.duration
-    )
-
-@route(PREFIX + "/library/{lid}/albums")
-def LibraryAlbums(lid):
-    library = music.get_library(lid)
-
+@route(PREFIX + "/glibrary/albums")
+def LibraryAlbums(libraryId):
     oc = ObjectContainer(
         title2=L("library_albums"),
         content=ContainerContent.Playlists,
@@ -180,64 +168,57 @@ def LibraryAlbums(lid):
         art=R("album.png")
     )
 
+    library = music.get_library(libraryId)
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(AlbumObject(
-            key = Callback(LibraryAlbum, lid=library.id, albumId=album.id),
-            rating_key = album.id,
-            title = album.name,
-            thumb = url_or_default(album.thumb, R("album.png")),
-            artist = album.artist.name
-        ))
+        oc.add(album_object(libraryId, album))
 
     return oc
 
-@route(PREFIX + "/library/{lid}/songs")
-def LibrarySongs(lid):
-    library = music.get_library(lid)
-
+@route(PREFIX + "/glibrary/songs")
+def LibrarySongs(libraryId):
     oc = ObjectContainer(
         title2=L("library_songs"),
         content=ContainerContent.Tracks,
         view_group="track_list",
-        art=R("playlist.png")
+        art=R("track.png")
     )
 
+    library = music.get_library(libraryId)
     tracks = library.get_tracks()
     for track in tracks:
         oc.add(track_object(track))
 
     return oc
 
-@route(PREFIX + "/library/{lid}/genres")
-def LibraryGenres(lid):
-    library = music.get_library(lid)
-
+@route(PREFIX + "/glibrary/genres")
+def LibraryGenres(libraryId):
     oc = ObjectContainer(
         title2=L("library_genres"),
         content=ContainerContent.Genres,
-        art=R("playlist.png")
+        art=R("genre.png")
     )
 
+    library = music.get_library(libraryId)
     genres = library.get_genres()
     for genre in genres:
         oc.add(DirectoryObject(
-            key = Callback(LibraryGenreTracks, genreName = genre.name, lid = lid),
+            key = Callback(GenreTracks, libraryId=libraryId, genreName = genre.name),
             title = genre.name,
-            thumb = url_or_default(genre.thumb, R("playlist.png"))
+            thumb = url_or_default(genre.thumb, R("genre.png"))
         ))
 
     return oc
 
-@route(PREFIX + "/library/{lid}/genre/{genreName}")
-def LibraryGenreTracks(lid, genreName):
-    library = music.get_library(lid)
+@route(PREFIX + "/glibrary/genre")
+def GenreTracks(libraryId, genreName):
+    library = music.get_library(libraryId)
     genre = music.get_genre(genreName)
 
     oc = ObjectContainer(
         title2=genre.name,
         content=ContainerContent.Tracks,
-        art=url_or_default(genre.thumb, R("playlist.png"))
+        art=url_or_default(genre.thumb, R("genre.png"))
     )
 
     tracks = library.get_tracks_in_genre(genre)
@@ -246,15 +227,10 @@ def LibraryGenreTracks(lid, genreName):
 
     return oc
 
-@route(PREFIX + "/library/{lid}/artist/{artistId}")
-def LibraryArtist(lid, artistId):
-    # Plex ignores empty strings
-    if artistId is None:
-        artistId = ""
-
-    library = music.get_library(lid)
+@route(PREFIX + "/glibrary/artist")
+def LibraryArtist(libraryId, artistId):
+    library = music.get_library(libraryId)
     artist = music.get_artist(artistId)
-    albums = library.get_albums_by_artist(artist)
 
     oc = ObjectContainer(
         title2=artist.name,
@@ -263,22 +239,15 @@ def LibraryArtist(lid, artistId):
         art=url_or_default(artist.thumb, R("artist.png"))
     )
 
-    for album in albums:
-        oc.add(AlbumObject(
-            key = Callback(LibraryAlbum, lid=library.id, albumId=album.id),
-            rating_key = album.id,
-            title = album.name,
-            thumb = url_or_default(album.thumb, R("album.png")),
-            artist = album.artist.name
-        ))
+    for album in smart_sort(library.get_albums_by_artist(artist)):
+        oc.add(album_object(libraryId, album))
 
     return oc
 
-@route(PREFIX + "/library/{lid}/album/{albumId}")
-def LibraryAlbum(lid, albumId):
-    library = music.get_library(lid)
+@route(PREFIX + "/glibrary/album")
+def Album(libraryId, albumId):
+    library = music.get_library(libraryId)
     album = music.get_album(albumId)
-    tracks = library.get_tracks_in_album(album)
 
     oc = ObjectContainer(
         title2=album.name,
@@ -287,8 +256,51 @@ def LibraryAlbum(lid, albumId):
         art=url_or_default(album.thumb, R("album.png"))
     )
 
-    for track in tracks:
+    for track in library.get_tracks_in_album(album):
         oc.add(track_object(track))
 
-    logger.debug(XML.StringFromElement(music.to_xml(oc)))
     return oc
+
+@route(PREFIX + "/track/play")
+def TrackStream(trackId, quality):
+    library = music.get_library(0)
+    track = library.get_track(trackId)
+    return Redirect(track.get_stream_url(quality))
+
+def track_object(track):
+    obj = TrackObject(
+        key = PREFIX,
+        rating_key = track.id,
+        title = track.title,
+        artist = track.artist.name,
+        album = track.album.name,
+        duration = track.duration,
+        thumb = track.thumb
+    )
+
+    obj.add(MediaObject(
+        bitrate = 320,
+        container = Container.MP3,
+        audio_codec = AudioCodec.MP3,
+        parts = [PartObject(
+            key = Callback(TrackStream, trackId = track.id, quality = "hi"),
+            duration = track.duration,
+            streams = [
+                AudioStreamObject(
+                    selected = 1,
+                    bitrate = 320,
+                    codec = AudioCodec.MP3,
+                )
+            ]
+        )]
+    ))
+
+    return obj
+
+def album_object(libraryId, album):
+    return PlaylistObject(
+        key = Callback(Album, libraryId=libraryId, albumId=album.id),
+        title = album.name,
+        thumb = album.thumb,
+        tagline = album.artist.name
+    )
