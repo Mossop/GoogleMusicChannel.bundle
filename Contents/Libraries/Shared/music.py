@@ -148,6 +148,7 @@ def get_item_for_url(url):
     id = parts.path
     args = parse_qs(parts.query)
 
+    library = None
     if "u" in args:
         lid = int(args["u"][0])
         if lid not in libraries:
@@ -161,9 +162,9 @@ def get_item_for_url(url):
             return library.track_by_id[id]
 
     if id in artist_by_id:
-        return artist_by_id[id]
+        return get_artist(id, library)
     if id in album_by_id:
-        return album_by_id[id]
+        return get_album(id, library)
     if id in track_by_id:
         return track_by_id[id]
 
