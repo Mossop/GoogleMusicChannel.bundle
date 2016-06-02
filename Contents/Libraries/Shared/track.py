@@ -13,12 +13,14 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.track")
 
 from utils import hash, urlize
 from album import get_album_for_track
 from globals import *
 from genre import FakeGenre
+
+logger = logging.getLogger("googlemusicchannel.track")
+
 
 class Track(object):
     data = None
@@ -101,11 +103,14 @@ class Track(object):
     def get_stream_url(self, client, device_id, quality):
         return client.get_stream_url(self.id, device_id, quality)
 
+
 def get_track_for_data(client, track_data):
     del track_data["id"]
 
-    if not "nid" in track_data:
-        track_data["nid"] = "FT%s" % hash("%s:%s:%s" % (track_data["title"], track_data["album"], track_data["albumArtist"]))
+    if "nid" not in track_data:
+        id = hash("%s:%s:%s" %
+                  (track_data["title"], track_data["album"], track_data["albumArtist"]))
+        track_data["nid"] = "FT%s" % id
 
     if track_data["nid"] in track_by_id:
         return track_by_id[track_data["nid"]]

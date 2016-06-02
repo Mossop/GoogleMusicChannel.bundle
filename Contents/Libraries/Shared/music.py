@@ -13,11 +13,10 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.music")
 
 from urlparse import urlsplit, parse_qs
 
-import pathset
+import pathset # NOQA
 
 from genre import Genre
 from track import Track
@@ -26,7 +25,10 @@ from artist import Artist
 from library import Library
 from globals import *
 
+logger = logging.getLogger("googlemusicchannel.music")
+
 DB_SCHEMA = 2
+
 
 def load_from(data):
     if data["schema"] != DB_SCHEMA:
@@ -43,6 +45,7 @@ def load_from(data):
     for l in data["libraries"]:
         Library.unpickle(l)
 
+
 def set_credentials(username, password):
     if len(libraries) == 1:
         lib = libraries.values()[0]
@@ -57,6 +60,7 @@ def set_credentials(username, password):
         return
 
     Library(username, password)
+
 
 def refresh():
     logger.info("Updating genres.")
@@ -113,17 +117,22 @@ def refresh():
         "artists": map(lambda a: a.pickle(), artist_by_id.values())
     }
 
+
 def get_library(id):
     return libraries[int(id)]
+
 
 def get_genre(name):
     return genre_by_name[name]
 
+
 def get_artist(id):
     return artist_by_id[id]
 
+
 def get_album(id):
     return album_by_id[id]
+
 
 def get_item_for_url(url):
     if url[0:len(base_path)] != base_path:
@@ -135,7 +144,7 @@ def get_item_for_url(url):
 
     if "u" in args:
         lid = int(args["u"][0])
-        if not lid in libraries:
+        if lid not in libraries:
             raise Exception("Couldn't find a library for id '%d'" % lid)
         library = get_library(lid)
         if id in library.track_by_id:
@@ -153,6 +162,7 @@ def get_item_for_url(url):
         return track_by_id[id]
 
     raise Exception("ID '%s' didn't match any known item." % id)
+
 
 # There is a bug in the Plex API that causes albums to return as <Object>
 # instead of <Directory> which breaks many clients.

@@ -20,6 +20,7 @@ PREFIX = '/music/gmusic'
 SOURCE = "Google Music"
 DB_NAME = "pickles"
 
+
 def smart_sort(list):
     def simplify(s):
         s = s.lower()
@@ -28,6 +29,7 @@ def smart_sort(list):
         return s
 
     return sorted(list, lambda a, b: cmp(a, b), lambda o: simplify(o.name))
+
 
 class LogHandler(logging.Handler):
     def __init__(self):
@@ -59,10 +61,12 @@ logger = logging.getLogger("googlemusicchannel.channel")
 
 music.bugfix_album(AlbumObject)
 
+
 def url_or_default(url, default):
     if url is not None:
         return url
     return default
+
 
 def refresh():
     data = music.refresh()
@@ -70,8 +74,10 @@ def refresh():
 
     Thread.CreateTimer(60 * 10, refresh)
 
+
 def login():
     music.set_credentials(Prefs["username"], Prefs["password"])
+
 
 def Start():
     logger.debug("Start called for %s" % (Prefs["username"]))
@@ -91,48 +97,51 @@ def Start():
     Plugin.AddViewGroup("album_list", viewMode="Albums", mediaType="albums", thumb=True)
     Plugin.AddViewGroup("track_list", viewMode="Songs", mediaType="songs", thumb=True)
 
+
 def ValidatePrefs():
     logger.debug("Validate called for %s" % Prefs["username"])
     login()
+
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
 def Main():
     oc = ObjectContainer(content=ContainerContent.Mixed)
 
     oc.add(DirectoryObject(
-        key = Callback(Library, libraryId = 0),
-        title = L("library"),
-        thumb = R("library.png")
+        key=Callback(Library, libraryId=0),
+        title=L("library"),
+        thumb=R("library.png")
     ))
 
     return oc
+
 
 @route(PREFIX + "/glibrary")
 def Library(libraryId):
     oc = ObjectContainer(content=ContainerContent.Mixed, title2=L("library"))
 
     oc.add(DirectoryObject(
-        key = Callback(LibraryArtists, libraryId = libraryId),
-        title = L("library_artists"),
-        thumb = R("artist.png")
+        key=Callback(LibraryArtists, libraryId=libraryId),
+        title=L("library_artists"),
+        thumb=R("artist.png")
     ))
 
     oc.add(DirectoryObject(
-        key = Callback(LibraryAlbums, libraryId = libraryId),
-        title = L("library_albums"),
-        thumb = R("album.png")
+        key=Callback(LibraryAlbums, libraryId=libraryId),
+        title=L("library_albums"),
+        thumb=R("album.png")
     ))
 
     oc.add(DirectoryObject(
-        key = Callback(LibrarySongs, libraryId = libraryId),
-        title = L("library_songs"),
-        thumb = R("track.png")
+        key=Callback(LibrarySongs, libraryId=libraryId),
+        title=L("library_songs"),
+        thumb=R("track.png")
     ))
 
     oc.add(DirectoryObject(
-        key = Callback(LibraryGenres, libraryId = libraryId),
-        title = L("library_genres"),
-        thumb = R("genre.png")
+        key=Callback(LibraryGenres, libraryId=libraryId),
+        title=L("library_genres"),
+        thumb=R("genre.png")
     ))
 
     return oc
@@ -151,13 +160,14 @@ def LibraryArtists(libraryId):
     artists = library.get_artists()
     for artist in smart_sort(artists):
         oc.add(ArtistObject(
-            key = Callback(LibraryArtist, libraryId=libraryId, artistId=artist.id),
-            rating_key = artist.id,
-            title = artist.name,
-            thumb = url_or_default(artist.thumb, R("artist.png"))
+            key=Callback(LibraryArtist, libraryId=libraryId, artistId=artist.id),
+            rating_key=artist.id,
+            title=artist.name,
+            thumb=url_or_default(artist.thumb, R("artist.png"))
         ))
 
     return oc
+
 
 @route(PREFIX + "/glibrary/albums")
 def LibraryAlbums(libraryId):
@@ -175,6 +185,7 @@ def LibraryAlbums(libraryId):
 
     return oc
 
+
 @route(PREFIX + "/glibrary/songs")
 def LibrarySongs(libraryId):
     oc = ObjectContainer(
@@ -191,6 +202,7 @@ def LibrarySongs(libraryId):
 
     return oc
 
+
 @route(PREFIX + "/glibrary/genres")
 def LibraryGenres(libraryId):
     oc = ObjectContainer(
@@ -203,12 +215,13 @@ def LibraryGenres(libraryId):
     genres = library.get_genres()
     for genre in genres:
         oc.add(DirectoryObject(
-            key = Callback(GenreTracks, libraryId=libraryId, genreName = genre.name),
-            title = genre.name,
-            thumb = url_or_default(genre.thumb, R("genre.png"))
+            key=Callback(GenreTracks, libraryId=libraryId, genreName=genre.name),
+            title=genre.name,
+            thumb=url_or_default(genre.thumb, R("genre.png"))
         ))
 
     return oc
+
 
 @route(PREFIX + "/glibrary/genre")
 def GenreTracks(libraryId, genreName):
@@ -227,6 +240,7 @@ def GenreTracks(libraryId, genreName):
 
     return oc
 
+
 @route(PREFIX + "/glibrary/artist")
 def LibraryArtist(libraryId, artistId):
     library = music.get_library(libraryId)
@@ -243,6 +257,7 @@ def LibraryArtist(libraryId, artistId):
         oc.add(album_object(libraryId, album))
 
     return oc
+
 
 @route(PREFIX + "/glibrary/album")
 def Album(libraryId, albumId):
@@ -261,22 +276,22 @@ def Album(libraryId, albumId):
 
     return oc
 
+
 def track_object(track):
-    obj = TrackObject(
-        url = track.url,
-        title = track.title,
-        artist = track.artist.name,
-        album = track.album.name,
-        duration = track.duration,
-        thumb = track.thumb
+    return TrackObject(
+        url=track.url,
+        title=track.title,
+        artist=track.artist.name,
+        album=track.album.name,
+        duration=track.duration,
+        thumb=track.thumb
     )
 
-    return obj
 
 def album_object(libraryId, album):
     return PlaylistObject(
-        key = Callback(Album, libraryId=libraryId, albumId=album.id),
-        title = album.name,
-        thumb = album.thumb,
-        tagline = album.artist.name
+        key=Callback(Album, libraryId=libraryId, albumId=album.id),
+        title=album.name,
+        thumb=album.thumb,
+        tagline=album.artist.name
     )

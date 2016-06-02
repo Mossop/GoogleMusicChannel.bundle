@@ -13,13 +13,15 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.library")
 
 from globals import *
 from track import get_track_for_data
 from utils import urlize
 
 from gmusicapi import Mobileclient
+
+logger = logging.getLogger("googlemusicchannel.library")
+
 
 class LibraryTrack(object):
     library = None
@@ -43,7 +45,8 @@ class LibraryTrack(object):
     @classmethod
     def unpickle(cls, library, data):
         if data["nid"] not in track_by_id:
-            logger.error("Refusing to unpickle library track with no valid track (%s)." % data["nid"])
+            logger.error("Refusing to unpickle library track with no valid track (%s)." %
+                         (data["nid"]))
             return
 
         track = track_by_id[data["nid"]]
@@ -87,6 +90,7 @@ class LibraryTrack(object):
         param = urlize("%s - %s" % (self.title, self.artist.name))
 
         return "%s%s?t=%s" % (base_path, self.id, param)
+
 
 # We need at least one Library in order to have a valid client
 class Library(object):
@@ -181,7 +185,8 @@ class Library(object):
             addedset = track_ids - currentset
             modifiedset = currentset & track_ids
 
-            logger.info("Adding %d new tracks and updating %d existing tracks." % (len(addedset), len(modifiedset)))
+            logger.info("Adding %d new tracks and updating %d existing tracks." %
+                        (len(addedset), len(modifiedset)))
 
             def add_track(track_data):
                 lid = track_data["id"]

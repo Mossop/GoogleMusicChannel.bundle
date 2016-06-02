@@ -13,11 +13,13 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.album")
 
 from globals import *
 from artist import get_artist_for_album, get_artist_for_track
 from utils import hash, urlize
+
+logger = logging.getLogger("googlemusicchannel.album")
+
 
 class Album(object):
     data = None
@@ -58,7 +60,7 @@ class Album(object):
         if self.artistId is not None:
             return artist_by_id[self.artistId]
         return None
-    
+
     @property
     def thumb(self):
         return self.data["albumArtRef"]
@@ -68,6 +70,7 @@ class Album(object):
         param = urlize("%s - %s" % (self.name, self.artist.name))
 
         return "%s%s?t=%s" % (base_path, self.id, param)
+
 
 def get_fake_album_for_track(client, track_data):
     # This is a fake track ID, make up an album if necessary
@@ -94,14 +97,15 @@ def get_fake_album_for_track(client, track_data):
     album.artistId = artist.id
     return album
 
+
 def get_real_album_for_track(client, track_data):
     # This is a real track ID, look up the album with the client
     albumId = track_data["albumId"]
 
-    if track_data["albumId"] in album_by_id:
-        album = album_by_id[track_data["albumId"]]
+    if albumId in album_by_id:
+        album = album_by_id[albumId]
     else:
-        album_data = client.get_album_info(track_data["albumId"], False)
+        album_data = client.get_album_info(albumId, False)
         album = Album(album_data)
 
     if album.name != track_data["album"]:
@@ -113,6 +117,7 @@ def get_real_album_for_track(client, track_data):
         album.artistId = artist.id
 
     return album
+
 
 def get_album_for_track(client, track_data):
     if track_data["nid"][0] == "F":

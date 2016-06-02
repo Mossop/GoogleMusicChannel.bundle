@@ -13,10 +13,12 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.artist")
 
 from globals import *
 from utils import hash, urlize
+
+logger = logging.getLogger("googlemusicchannel.artist")
+
 
 class Artist(object):
     data = None
@@ -61,6 +63,7 @@ various_artists = Artist({
     "name": "Various Artists"
 })
 
+
 # Called when there is no real album for a track
 def get_artist_for_track(client, track_data):
     artistId = "FA%s" % hash(track_data["albumArtist"])
@@ -80,6 +83,7 @@ def get_artist_for_track(client, track_data):
         artist_data["artistArtRef"] = None
 
     return Artist(artist_data)
+
 
 # Called when we should expect a real artist to exist
 def get_artist_for_album(client, album_data, track_data):

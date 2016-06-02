@@ -16,13 +16,17 @@ import re
 import hashlib
 from base64 import urlsafe_b64encode
 import logging
+
 logger = logging.getLogger("googlemusicchannel.utils")
+
 
 def urlize(string):
     return re.sub(r'[\W-]+', "_", string)
 
+
 def hash(data):
     return urlsafe_b64encode(hashlib.sha256(data).digest())
+
 
 def get_album_hash(artist, name):
     # We use this has as the ID as it should be reasonably unique and freely

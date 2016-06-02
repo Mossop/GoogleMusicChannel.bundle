@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.genre")
 
 from globals import *
+
+logger = logging.getLogger("googlemusicchannel.genre")
+
 
 class FakeGenre(object):
     name = None
@@ -36,6 +38,7 @@ class FakeGenre(object):
         if len(tracks) == 0:
             return None
         return tracks[0].album.thumb
+
 
 class Genre(object):
     data = None
