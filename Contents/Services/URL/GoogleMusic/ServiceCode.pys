@@ -13,10 +13,13 @@
 # limitations under the License.
 
 import logging
-logger = logging.getLogger("googlemusicchannel.service.url")
 
 from library import LibraryTrack
+from album import LibraryAlbum
 import music
+
+logger = logging.getLogger("googlemusicchannel.service.url")
+
 
 def MetadataObjectForURL(url):
     logger.debug("Requested metadata for %s" % url)
@@ -28,6 +31,7 @@ def MetadataObjectForURL(url):
 
     raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 
+
 def MediaObjectsForURL(url):
     logger.debug("Requested media objects for %s" % url)
 
@@ -38,31 +42,34 @@ def MediaObjectsForURL(url):
 
     raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 
+
 def MetadataObjectForLibraryTrack(track):
     return TrackObject(
-        title = track.title,
-        artist = track.album.artist.name,
-        album = track.album.name,
-        duration = track.duration,
-        url = track.url
+        title=track.title,
+        artist=track.album.artist.name,
+        album=track.album.name,
+        duration=track.duration,
+        url=track.url
     )
+
 
 def MediaObjectsForLibraryTrack(track):
     return [
         MediaObject(
-            bitrate = 320,
-            container = Container.MP3,
-            audio_codec = AudioCodec.MP3,
-            duration = track.duration,
-            parts = [PartObject(
-                key = Callback(LibraryTrackStream, libraryId = track.library.id, trackId = track.id, quality = "hi"),
-                duration = track.duration,
-                streams = [
+            bitrate=320,
+            container=Container.MP3,
+            audio_codec=AudioCodec.MP3,
+            duration=track.duration,
+            parts=[PartObject(
+                key=Callback(LibraryTrackStream, libraryId=track.library.id,
+                             trackId=track.id, quality="hi"),
+                duration=track.duration,
+                streams=[
                     AudioStreamObject(
-                        selected = 1,
-                        bitrate = 320,
-                        codec = AudioCodec.MP3,
-                        duration = track.duration
+                        selected=1,
+                        bitrate=320,
+                        codec=AudioCodec.MP3,
+                        duration=track.duration
                     )
                 ]
             )]
@@ -72,7 +79,7 @@ def MediaObjectsForLibraryTrack(track):
 
 def LibraryTrackStream(libraryId, trackId, quality):
     logger.debug("Attempt to stream")
-    library = music.get_library(libraryId)
-    track = library.get_track(trackId)
+    library=music.get_library(libraryId)
+    track=library.get_track(trackId)
 
     return Redirect(track.get_stream_url(quality))
