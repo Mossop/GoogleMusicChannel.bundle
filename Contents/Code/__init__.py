@@ -105,20 +105,27 @@ def ValidatePrefs():
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
 def Main():
-    oc = ObjectContainer(content=ContainerContent.Mixed)
-
-    oc.add(DirectoryObject(
-        key=Callback(Library, libraryId=0),
-        title=L("library"),
-        thumb=R("library.png")
-    ))
-
-    return oc
+    return Library(0)
+#    oc = ObjectContainer(content=ContainerContent.Mixed)
+#
+#    oc.add(DirectoryObject(
+#        key=Callback(Library, libraryId=0),
+#        title=L("library"),
+#        thumb=R("library.png")
+#    ))
+#
+#    return oc
 
 
 @route(PREFIX + "/glibrary")
 def Library(libraryId):
     oc = ObjectContainer(content=ContainerContent.Mixed, title2=L("library"))
+
+    oc.add(DirectoryObject(
+        key=Callback(LibraryPlaylists, libraryId=libraryId),
+        title=L("library_playlists"),
+        thumb=R("playlist.png")
+    ))
 
     oc.add(DirectoryObject(
         key=Callback(LibraryArtists, libraryId=libraryId),
@@ -143,6 +150,45 @@ def Library(libraryId):
         title=L("library_genres"),
         thumb=R("genre.png")
     ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/playlists")
+def LibraryPlaylists(libraryId):
+    oc = ObjectContainer(
+        title2=L("library_playlists"),
+        content=ContainerContent.Artists,
+        view_group="artist_list",
+        art=R("playlist.png")
+    )
+
+    library = music.get_library(libraryId)
+    playlists = library.get_playlists()
+    for playlist in smart_sort(playlists):
+        oc.add(PlaylistObject(
+            key=Callback(LibraryPlaylist, libraryId=libraryId, playlistId=playlist.id),
+            title=playlist.name,
+            thumb=R("playlist.png")
+        ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/playlist")
+def LibraryPlaylist(libraryId, playlistId):
+    library = music.get_library(libraryId)
+    playlist = library.get_playlist(playlistId)
+
+    oc = ObjectContainer(
+        title2=playlist.name,
+        content=ContainerContent.Tracks,
+        view_group="track_list",
+        art=R("playlist.png")
+    )
+
+    for track in playlist.tracks:
+        oc.add(track_object(track))
 
     return oc
 

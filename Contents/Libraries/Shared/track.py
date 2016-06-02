@@ -124,7 +124,8 @@ class Track(object):
 
 
 def get_track_for_data(library, track_data):
-    del track_data["id"]
+    if "id" in track_data:
+        del track_data["id"]
 
     libraryId = None
     if "nid" not in track_data:

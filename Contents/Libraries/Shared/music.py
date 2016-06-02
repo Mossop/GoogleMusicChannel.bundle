@@ -92,9 +92,15 @@ def refresh():
     artists = set()
     for library in libraries.values():
         for track in library.get_tracks():
-            tracks.add(track.id)
-            albums.add(track.album.id)
-            artists.add(track.artist.id)
+            tracks.add(track)
+        for playlist in library.get_playlists():
+            for track in playlist.tracks:
+                tracks.add(track)
+
+    for track in tracks:
+        albums.add(track.album.id)
+        artists.add(track.artist.id)
+    tracks = set(map(lambda t: t.id, tracks))
 
     def purge(list, used, name):
         unwanted = set(list.keys()) - used

@@ -36,6 +36,8 @@ class Library(object):
     # library ID, not the store ID
     track_by_id = None
 
+    playlist_by_id = None
+
     def __init__(self, username, password):
         self.id = 0
         libraries[self.id] = self
@@ -58,7 +60,8 @@ class Library(object):
             "username": self.username,
             "password": self.password,
             "device_id": self.device_id,
-            "tracks": self.track_by_id
+            "tracks": self.track_by_id,
+            "playlists": map(lambda p: p.pickle(), self.playlist_by_id.values())
         }
 
     @classmethod
@@ -70,6 +73,8 @@ class Library(object):
             library.clear()
 
             library.track_by_id = data["tracks"]
+            for playlist_data in data["playlists"]:
+                Playlist.unpickle(library, playlist_data)
         except:
             logger.exception("Failed to load data.")
             return None
@@ -94,6 +99,7 @@ class Library(object):
 
     def clear(self):
         self.track_by_id = {}
+        self.playlist_by_id = {}
 
     def update(self):
         logger.info("Starting library update.")
@@ -135,7 +141,30 @@ class Library(object):
                 if id in self.track_by_id:
                     del self.track_by_id[id]
 
-            logger.info("Update complete, library has %d tracks." % (len(self.track_by_id)))
+            logger.info("Track update complete, library has %d tracks." % (len(self.track_by_id)))
+
+            def add_playlist(playlist_data, entries):
+                playlist = Playlist(self, playlist_data)
+
+                for entry in entries:
+                    trackId = entry["trackId"]
+                    if trackId in self.track_by_id:
+                        trackId = self.track_by_id[trackId]
+                    if trackId in track_by_id:
+                        playlist.track_ids.append(track_by_id[trackId].id)
+                        continue
+                    track_data = self.client.get_track_info(trackId)
+                    playlist.track_ids.append(get_track_for_data(self, track_data).id)
+
+            playlists = self.client.get_all_user_playlist_contents()
+            for playlist in playlists:
+                add_playlist(playlist, playlist["tracks"])
+
+            all_playlists = self.client.get_all_playlists()
+            for playlist in all_playlists:
+                if playlist.get("type") == "SHARED":
+                    entries = self.client.get_shared_playlist_contents(playlist["shareToken"])
+                    add_playlist(playlist, entries)
         except:
             logger.exception("Failed to update library.")
 
@@ -162,3 +191,41 @@ class Library(object):
 
     def get_track(self, trackId):
         return self.track_by_id[trackId]
+
+    def get_playlist(self, playlistId):
+        return self.playlist_by_id[playlistId]
+
+    def get_playlists(self):
+        return self.playlist_by_id.values()
+
+class Playlist(object):
+    data = None
+    track_ids = None
+
+    def __init__(self, library, data):
+        self.data = data
+        self.track_ids = []
+        library.playlist_by_id[self.id] = self
+
+    def pickle(self):
+        return {
+            "data": self.data,
+            "tracks": self.track_ids
+        }
+
+    @classmethod
+    def unpickle(cls, library, data):
+        playlist = cls(library, data["data"])
+        playlist.track_ids = data["tracks"]
+
+    @property
+    def id(self):
+        return self.data["id"]
+
+    @property
+    def name(self):
+        return self.data["name"]
+
+    @property
+    def tracks(self):
+        return map(lambda id: track_by_id[id], self.track_ids)
