@@ -162,7 +162,7 @@ class Library(object):
 
             all_playlists = self.client.get_all_playlists()
             for playlist in all_playlists:
-                if playlist.get("type") == "SHARED":
+                if playlist.get("type") != "USER_GENERATED":
                     entries = self.client.get_shared_playlist_contents(playlist["shareToken"])
                     add_playlist(playlist, entries)
         except:
