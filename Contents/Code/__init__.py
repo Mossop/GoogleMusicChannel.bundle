@@ -181,7 +181,13 @@ def LibraryAlbums(libraryId):
     library = music.get_library(libraryId)
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(album_object(libraryId, album))
+        oc.add(AlbumObject(
+            key=Callback(Album, libraryId=libraryId, albumId=album.id),
+            rating_key=album.id,
+            title=album.name,
+            thumb=album.thumb,
+            artist=album.artist.name
+        ))
 
     return oc
 
@@ -254,7 +260,13 @@ def LibraryArtist(libraryId, artistId):
     )
 
     for album in smart_sort(library.get_albums_by_artist(artist)):
-        oc.add(album_object(libraryId, album))
+        oc.add(AlbumObject(
+            key=Callback(Album, libraryId=libraryId, albumId=album.id),
+            rating_key=album.id,
+            title=album.name,
+            thumb=album.thumb,
+            artist=album.artist.name
+        ))
 
     return oc
 
@@ -285,13 +297,4 @@ def track_object(track):
         album=track.album.name,
         duration=track.duration,
         thumb=track.thumb
-    )
-
-
-def album_object(libraryId, album):
-    return PlaylistObject(
-        key=Callback(Album, libraryId=libraryId, albumId=album.id),
-        title=album.name,
-        thumb=album.thumb,
-        tagline=album.artist.name
     )
