@@ -71,6 +71,46 @@ class Album(object):
 
         return "%s%s?t=%s" % (base_path, self.id, param)
 
+    @property
+    def tracks(self):
+        # We don't know what this means yet!
+        return []
+
+
+# This is a special view of an Album including only the tracks that are in a
+# given library.
+class LibraryAlbum(object):
+    library = None,
+    artist = None,
+
+    def __init__(self, library, album):
+        self.library = library
+        self.album = album
+
+    @property
+    def id(self):
+        return self.album.id
+
+    @property
+    def name(self):
+        return self.album.name
+
+    @property
+    def artist(self):
+        return self.album.artist
+
+    @property
+    def thumb(self):
+        return self.album.thumb
+
+    @property
+    def url(self):
+        return "%s&u=%d" % (self.album.url, self.library.id)
+
+    @property
+    def tracks(self):
+        return self.library.get_tracks_in_album(self.album)
+
 
 def get_fake_album_for_track(client, track_data):
     # This is a fake track ID, make up an album if necessary

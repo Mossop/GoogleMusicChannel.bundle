@@ -16,12 +16,12 @@ import logging
 
 from urlparse import urlsplit, parse_qs
 
-import pathset # NOQA
+import pathset  # NOQA
 
 from genre import Genre
 from track import Track
-from album import Album
-from artist import Artist
+from album import Album, LibraryAlbum
+from artist import Artist, LibraryArtist
 from library import Library
 from globals import *
 
@@ -126,12 +126,18 @@ def get_genre(name):
     return genre_by_name[name]
 
 
-def get_artist(id):
-    return artist_by_id[id]
+def get_artist(id, library = None):
+    artist = artist_by_id[id]
+    if library is not None:
+        return LibraryArtist(library, artist)
+    return artist
 
 
-def get_album(id):
-    return album_by_id[id]
+def get_album(id, library = None):
+    album = album_by_id[id]
+    if library is not None:
+        return LibraryAlbum(library, album)
+    return album
 
 
 def get_item_for_url(url):

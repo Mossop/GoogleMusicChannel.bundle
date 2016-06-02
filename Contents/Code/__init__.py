@@ -250,7 +250,7 @@ def GenreTracks(libraryId, genreName):
 @route(PREFIX + "/glibrary/artist")
 def LibraryArtist(libraryId, artistId):
     library = music.get_library(libraryId)
-    artist = music.get_artist(artistId)
+    artist = music.get_artist(artistId, library)
 
     oc = ObjectContainer(
         title2=artist.name,
@@ -259,7 +259,7 @@ def LibraryArtist(libraryId, artistId):
         art=url_or_default(artist.thumb, R("artist.png"))
     )
 
-    for album in smart_sort(library.get_albums_by_artist(artist)):
+    for album in smart_sort(artist.albums):
         oc.add(AlbumObject(
             key=Callback(Album, libraryId=libraryId, albumId=album.id),
             rating_key=album.id,
@@ -274,7 +274,7 @@ def LibraryArtist(libraryId, artistId):
 @route(PREFIX + "/glibrary/album")
 def Album(libraryId, albumId):
     library = music.get_library(libraryId)
-    album = music.get_album(albumId)
+    album = music.get_album(albumId, library)
 
     oc = ObjectContainer(
         title2=album.name,
@@ -283,7 +283,7 @@ def Album(libraryId, albumId):
         art=url_or_default(album.thumb, R("album.png"))
     )
 
-    for track in library.get_tracks_in_album(album):
+    for track in album.tracks:
         oc.add(track_object(track))
 
     return oc

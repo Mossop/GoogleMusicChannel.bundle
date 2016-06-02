@@ -58,6 +58,43 @@ class Artist(object):
 
         return "%s%s?t=%s" % (base_path, self.id, param)
 
+    @property
+    def albums(self):
+        # We don't know what this means yet!
+        return []
+
+
+# This is a special view of an Artist including only the albums that are in a
+# given library.
+class LibraryArtist(object):
+    library = None
+    artist = None
+
+    def __init__(self, library, artist):
+        self.library = library
+        self.artist = artist
+
+    @property
+    def id(self):
+        return self.artist.id
+
+    @property
+    def name(self):
+        return self.artist.name
+
+    @property
+    def thumb(self):
+        return self.artist.thumb
+
+    @property
+    def url(self):
+        return "%s&u=%d" % (self.artist.url, self.library.id)
+
+    @property
+    def albums(self):
+        return self.library.get_albums_by_artist(self.artist)
+
+
 various_artists = Artist({
     "artistId": "FA" + hash("Various Artists"),
     "name": "Various Artists"
