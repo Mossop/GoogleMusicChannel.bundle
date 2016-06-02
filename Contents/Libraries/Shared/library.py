@@ -198,6 +198,7 @@ class Library(object):
     def get_playlists(self):
         return self.playlist_by_id.values()
 
+
 class Playlist(object):
     data = None
     track_ids = None
