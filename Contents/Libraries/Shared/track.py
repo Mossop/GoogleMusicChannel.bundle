@@ -25,9 +25,11 @@ logger = logging.getLogger("googlemusicchannel.track")
 class Track(object):
     data = None
     albumId = None
+    libraryId = None
 
-    def __init__(self, data):
+    def __init__(self, data, libraryId = None):
         self.data = data
+        self.libraryId = libraryId
         track_by_id[self.id] = self
 
         if data["genre"] in genre_by_name:
@@ -49,12 +51,14 @@ class Track(object):
 
         track = cls(data["data"])
         track.albumId = data["albumId"]
+        track.libraryId = data["libraryId"]
         return track
 
     def pickle(self):
         return {
             "data": self.data,
-            "albumId": self.albumId
+            "albumId": self.albumId,
+            "libraryId": self.libraryId
         }
 
     def __cmp__(self, other):
@@ -98,16 +102,33 @@ class Track(object):
     def url(self):
         param = urlize("%s - %s" % (self.title, self.artist.name))
 
-        return "%s%s?t=%s" % (base_path, self.id, param)
+        url = "%s%s?t=%s" % (base_path, self.id, param)
+        if self.libraryId is not None:
+            url = "%s&u=%d" % (url, self.libraryId)
+        return url
 
-    def get_stream_url(self, client, device_id, quality):
-        return client.get_stream_url(self.id, device_id, quality)
+    def get_stream_url(self, quality, client = None, device_id = None):
+        pid = self.id
+        if client is None:
+            if self.libraryId is not None:
+                library = libraries[self.libraryId]
+                for (lid, id) in library.track_by_id.iteritems():
+                    if id == self.id:
+                        pid = lid
+            else:
+                library = libraries[0]
+            client = library.client
+            device_id = library.get_device_id()
+
+        return client.get_stream_url(pid, device_id, quality)
 
 
-def get_track_for_data(client, track_data):
+def get_track_for_data(library, track_data):
     del track_data["id"]
 
+    libraryId = None
     if "nid" not in track_data:
+        libraryId = library.id
         id = hash("%s:%s:%s" %
                   (track_data["title"], track_data["album"], track_data["albumArtist"]))
         track_data["nid"] = "FT%s" % id
@@ -115,8 +136,8 @@ def get_track_for_data(client, track_data):
     if track_data["nid"] in track_by_id:
         return track_by_id[track_data["nid"]]
 
-    track = Track(track_data)
-    album = get_album_for_track(client, track_data)
+    track = Track(track_data, libraryId)
+    album = get_album_for_track(library.client, track_data)
     track.albumId = album.id
 
     return track

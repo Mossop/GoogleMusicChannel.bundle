@@ -16,80 +16,10 @@ import logging
 
 from globals import *
 from track import get_track_for_data
-from utils import urlize
 
 from gmusicapi import Mobileclient
 
 logger = logging.getLogger("googlemusicchannel.library")
-
-
-class LibraryTrack(object):
-    library = None
-    id = None
-    track = None
-    isfake = False
-
-    def __init__(self, library, id, track):
-        self.library = library
-        self.id = id
-        self.track = track
-        self.isfake = self.track.id[0] == "F"
-        library.track_by_id[id] = self
-
-    def pickle(self):
-        return {
-            "id": self.id,
-            "nid": self.track.id
-        }
-
-    @classmethod
-    def unpickle(cls, library, data):
-        if data["nid"] not in track_by_id:
-            logger.error("Refusing to unpickle library track with no valid track (%s)." %
-                         (data["nid"]))
-            return
-
-        track = track_by_id[data["nid"]]
-        return LibraryTrack(library, data["id"], track)
-
-    def __cmp__(self, other):
-        if isinstance(other, LibraryTrack):
-            other = other.track
-        return self.track.__cmp__(other)
-
-    def get_stream_url(self, quality):
-        device_id = self.library.get_device_id()
-        return self.library.client.get_stream_url(self.id, device_id, quality)
-
-    @property
-    def artist(self):
-        return self.track.artist
-
-    @property
-    def album(self):
-        return self.track.album
-
-    @property
-    def genre(self):
-        return self.track.genre
-
-    @property
-    def title(self):
-        return self.track.title
-
-    @property
-    def thumb(self):
-        return self.track.thumb
-
-    @property
-    def duration(self):
-        return self.track.duration
-
-    @property
-    def url(self):
-        param = urlize("%s - %s" % (self.title, self.artist.name))
-
-        return "%s%s?t=%s" % (base_path, self.id, param)
 
 
 # We need at least one Library in order to have a valid client
@@ -128,7 +58,7 @@ class Library(object):
             "username": self.username,
             "password": self.password,
             "device_id": self.device_id,
-            "tracks": map(lambda t: t.pickle(), self.track_by_id.values())
+            "tracks": self.track_by_id
         }
 
     @classmethod
@@ -139,8 +69,7 @@ class Library(object):
 
             library.clear()
 
-            for d in data["tracks"]:
-                LibraryTrack.unpickle(library, d)
+            library.track_by_id = data["tracks"]
         except:
             logger.exception("Failed to load data.")
             return None
@@ -191,8 +120,8 @@ class Library(object):
             def add_track(track_data):
                 lid = track_data["id"]
 
-                track = get_track_for_data(self.client, track_data)
-                LibraryTrack(self, lid, track)
+                track = get_track_for_data(self, track_data)
+                self.track_by_id[lid] = track.id
 
             for track_data in filter(lambda d: "nid" in d, data):
                 add_track(track_data)
@@ -220,7 +149,7 @@ class Library(object):
         return set(map(lambda t: t.album, filter(lambda t: t.artist == artist, self.get_tracks())))
 
     def get_tracks(self):
-        return self.track_by_id.values()
+        return map(lambda id: track_by_id[id], self.track_by_id.values())
 
     def get_tracks_in_album(self, album):
         return sorted(filter(lambda t: t.album == album, self.get_tracks()))

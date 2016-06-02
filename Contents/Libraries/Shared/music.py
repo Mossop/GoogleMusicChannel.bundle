@@ -92,7 +92,7 @@ def refresh():
     artists = set()
     for library in libraries.values():
         for track in library.get_tracks():
-            tracks.add(track.track.id)
+            tracks.add(track.id)
             albums.add(track.album.id)
             artists.add(track.artist.id)
 
@@ -138,6 +138,10 @@ def get_album(id, library = None):
     if library is not None:
         return LibraryAlbum(library, album)
     return album
+
+
+def get_track(id):
+    return track_by_id[id]
 
 
 def get_item_for_url(url):
