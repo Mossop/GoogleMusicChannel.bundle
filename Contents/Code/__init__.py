@@ -342,5 +342,5 @@ def track_object(track):
         artist=track.artist.name,
         album=track.album.name,
         duration=track.duration,
-        thumb=track.thumb
+        thumb=url_or_default(track.thumb, R("track.png"))
     )
