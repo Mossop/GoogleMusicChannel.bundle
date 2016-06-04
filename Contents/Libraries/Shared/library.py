@@ -143,8 +143,11 @@ class Library(object):
 
             logger.info("Track update complete, library has %d tracks." % (len(self.track_by_id)))
 
+            seenlists = set()
+
             def add_playlist(playlist_data, entries):
                 playlist = Playlist(self, playlist_data)
+                seenlists.add(playlist.id)
 
                 for entry in entries:
                     trackId = entry["trackId"]
@@ -158,13 +161,19 @@ class Library(object):
 
             playlists = self.client.get_all_user_playlist_contents()
             for playlist in playlists:
+                if playlist["deleted"]:
+                    continue
                 add_playlist(playlist, playlist["tracks"])
 
-            all_playlists = self.client.get_all_playlists()
+            all_playlists = self.client.get_all_playlists(False, False)
             for playlist in all_playlists:
                 if playlist.get("type") != "USER_GENERATED":
                     entries = self.client.get_shared_playlist_contents(playlist["shareToken"])
                     add_playlist(playlist, entries)
+
+            gonelists = set(self.playlist_by_id.keys()) - seenlists
+            for listid in gonelists:
+                del self.playlist_by_id[listid]
         except:
             logger.exception("Failed to update library.")
 
