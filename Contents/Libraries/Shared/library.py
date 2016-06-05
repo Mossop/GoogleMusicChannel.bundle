@@ -16,6 +16,7 @@ import logging
 
 from globals import *
 from track import get_track_for_data
+from station import Station
 
 from gmusicapi import Mobileclient
 
@@ -37,6 +38,8 @@ class Library(object):
     track_by_id = None
 
     playlist_by_id = None
+
+    station_by_id = None
 
     def __init__(self, username, password):
         self.id = 0
@@ -61,7 +64,8 @@ class Library(object):
             "password": self.password,
             "device_id": self.device_id,
             "tracks": self.track_by_id,
-            "playlists": map(lambda p: p.pickle(), self.playlist_by_id.values())
+            "playlists": map(lambda p: p.pickle(), self.playlist_by_id.values()),
+            "stations": map(lambda s: s.pickle(), self.station_by_id.values())
         }
 
     @classmethod
@@ -75,6 +79,9 @@ class Library(object):
             library.track_by_id = data["tracks"]
             for playlist_data in data["playlists"]:
                 Playlist.unpickle(library, playlist_data)
+
+            for station_data in data["stations"]:
+                station = Station.unpickle(library, station_data)
         except:
             logger.exception("Failed to load data.")
             return None
@@ -100,6 +107,7 @@ class Library(object):
     def clear(self):
         self.track_by_id = {}
         self.playlist_by_id = {}
+        self.station_by_id = {}
 
     def update(self):
         logger.info("Starting library update.")
@@ -174,6 +182,22 @@ class Library(object):
             gonelists = set(self.playlist_by_id.keys()) - seenlists
             for listid in gonelists:
                 del self.playlist_by_id[listid]
+
+            logger.info("Library has %d playlists." % (len(self.playlist_by_id)))
+
+            current_stations = set()
+            stations = self.client.get_all_stations()
+            for station_data in stations:
+                if not station_data["inLibrary"]:
+                    continue
+                station = Station(self, station_data)
+                current_stations.add(station.id)
+
+            removed = set(self.station_by_id.keys()) - current_stations
+            for rem in removed:
+                del self.station_by_id[rem]
+
+            logger.info("Library has %d stations." % (len(self.station_by_id)))
         except:
             logger.exception("Failed to update library.")
 
@@ -206,6 +230,12 @@ class Library(object):
 
     def get_playlists(self):
         return self.playlist_by_id.values()
+
+    def get_stations(self):
+        return self.station_by_id.values()
+
+    def get_station(self, id):
+        return self.station_by_id[id]
 
 
 class Playlist(object):

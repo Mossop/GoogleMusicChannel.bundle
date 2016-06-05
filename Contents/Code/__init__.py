@@ -128,6 +128,12 @@ def Library(libraryId):
     ))
 
     oc.add(DirectoryObject(
+        key=Callback(LibraryStations, libraryId=libraryId),
+        title=L("library_stations"),
+        thumb=R("station.png")
+    ))
+
+    oc.add(DirectoryObject(
         key=Callback(LibraryArtists, libraryId=libraryId),
         title=L("library_artists"),
         thumb=R("artist.png")
@@ -158,8 +164,8 @@ def Library(libraryId):
 def LibraryPlaylists(libraryId):
     oc = ObjectContainer(
         title2=L("library_playlists"),
-        content=ContainerContent.Artists,
-        view_group="artist_list",
+        content=ContainerContent.Playlists,
+        view_group="album_list",
         art=R("playlist.png")
     )
 
@@ -188,6 +194,45 @@ def LibraryPlaylist(libraryId, playlistId):
     )
 
     for track in playlist.tracks:
+        oc.add(track_object(track))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/stations")
+def LibraryStations(libraryId):
+    oc = ObjectContainer(
+        title2=L("library_stations"),
+        content=ContainerContent.Playlists,
+        view_group="album_list",
+        art=R("station.png")
+    )
+
+    library = music.get_library(libraryId)
+    stations = library.get_stations()
+    for station in smart_sort(stations):
+        oc.add(PlaylistObject(
+            key=Callback(LibraryStation, libraryId=libraryId, stationId=station.id),
+            title=station.name,
+            thumb=url_or_default(station.thumb, R("station.png"))
+        ))
+
+    return oc
+
+
+@route(PREFIX + "/station")
+def LibraryStation(libraryId, stationId):
+    library = music.get_library(libraryId)
+    station = library.get_station(stationId)
+
+    oc = ObjectContainer(
+        title2=station.name,
+        content=ContainerContent.Tracks,
+        view_group="track_list",
+        art=url_or_default(station.art, R("station.png"))
+    )
+
+    for track in station.get_tracks():
         oc.add(track_object(track))
 
     return oc
