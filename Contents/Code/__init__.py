@@ -194,7 +194,7 @@ def LibraryPlaylist(libraryId, playlistId):
     )
 
     for track in playlist.tracks:
-        oc.add(track_object(track))
+        oc.add(track_object(library, track))
 
     return oc
 
@@ -233,7 +233,7 @@ def LibraryStation(libraryId, stationId):
     )
 
     for track in station.get_tracks():
-        oc.add(track_object(track))
+        oc.add(track_object(library, track))
 
     return oc
 
@@ -295,7 +295,7 @@ def LibrarySongs(libraryId):
     library = music.get_library(libraryId)
     tracks = library.get_tracks()
     for track in tracks:
-        oc.add(track_object(track))
+        oc.add(track_object(library, track))
 
     return oc
 
@@ -333,7 +333,7 @@ def GenreTracks(libraryId, genreName):
 
     tracks = library.get_tracks_in_genre(genre)
     for track in tracks:
-        oc.add(track_object(track))
+        oc.add(track_object(library, track))
 
     return oc
 
@@ -375,14 +375,14 @@ def Album(libraryId, albumId):
     )
 
     for track in album.tracks:
-        oc.add(track_object(track))
+        oc.add(track_object(library, track))
 
     return oc
 
 
-def track_object(track):
+def track_object(library, track):
     return TrackObject(
-        url=track.url,
+        url=track.get_url(library),
         title=track.title,
         artist=track.artist.name,
         album=track.album.name,

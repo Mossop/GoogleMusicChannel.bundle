@@ -132,14 +132,14 @@ def get_genre(name):
     return genre_by_name[name]
 
 
-def get_artist(id, library = None):
+def get_artist(id, library=None):
     artist = artist_by_id[id]
     if library is not None:
         return LibraryArtist(library, artist)
     return artist
 
 
-def get_album(id, library = None):
+def get_album(id, library=None):
     album = album_by_id[id]
     if library is not None:
         return LibraryAlbum(library, album)
@@ -158,25 +158,17 @@ def get_item_for_url(url):
     id = parts.path
     args = parse_qs(parts.query)
 
-    library = None
-    if "u" in args:
-        lid = int(args["u"][0])
-        if lid not in libraries:
-            raise Exception("Couldn't find a library for id '%d'" % lid)
-        library = get_library(lid)
-        if id in library.track_by_id:
-            return library.track_by_id[id]
-
-    for library in libraries.values():
-        if id in library.track_by_id:
-            return library.track_by_id[id]
+    lid = int(args["u"][0])
+    if lid not in libraries:
+        raise Exception("Couldn't find a library for id '%d'" % lid)
+    library = get_library(lid)
 
     if id in artist_by_id:
-        return get_artist(id, library)
+        return library, get_artist(id, library)
     if id in album_by_id:
-        return get_album(id, library)
+        return library, get_album(id, library)
     if id in track_by_id:
-        return track_by_id[id]
+        return library, track_by_id[id]
 
     raise Exception("ID '%s' didn't match any known item." % id)
 

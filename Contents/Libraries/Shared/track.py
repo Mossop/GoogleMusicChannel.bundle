@@ -25,11 +25,9 @@ logger = logging.getLogger("googlemusicchannel.track")
 class Track(object):
     data = None
     albumId = None
-    libraryId = None
 
-    def __init__(self, data, libraryId = None):
+    def __init__(self, data):
         self.data = data
-        self.libraryId = libraryId
         track_by_id[self.id] = self
 
         if data["genre"] in genre_by_name:
@@ -51,14 +49,12 @@ class Track(object):
 
         track = cls(data["data"])
         track.albumId = data["albumId"]
-        track.libraryId = data["libraryId"]
         return track
 
     def pickle(self):
         return {
             "data": self.data,
             "albumId": self.albumId,
-            "libraryId": self.libraryId
         }
 
     def __cmp__(self, other):
@@ -72,7 +68,7 @@ class Track(object):
     # Public API
     @property
     def id(self):
-        return self.data["nid"]
+        return self.data["id"]
 
     @property
     def artist(self):
@@ -98,46 +94,25 @@ class Track(object):
     def duration(self):
         return int(self.data["durationMillis"])
 
-    @property
-    def url(self):
+    def get_url(self, library):
         param = urlize("%s - %s" % (self.title, self.artist.name))
 
-        url = "%s%s?t=%s" % (base_path, self.id, param)
-        if self.libraryId is not None:
-            url = "%s&u=%d" % (url, self.libraryId)
-        return url
+        return "%s%s?t=%s&u=%d" % (base_path, self.id, param, library.id)
 
-    def get_stream_url(self, quality, client = None, device_id = None):
-        pid = self.id
-        if client is None:
-            if self.libraryId is not None:
-                library = libraries[self.libraryId]
-                for (lid, id) in library.track_by_id.iteritems():
-                    if id == self.id:
-                        pid = lid
-            else:
-                library = libraries[0]
-            client = library.client
-            device_id = library.get_device_id()
+    def get_stream_url(self, library, quality):
+        device_id = library.get_device_id()
 
-        return client.get_stream_url(pid, device_id, quality)
+        return library.client.get_stream_url(self.id, device_id, quality)
 
 
 def get_track_for_data(library, track_data):
-    if "id" in track_data:
-        del track_data["id"]
+    if "nid" in track_data:
+        track_data["id"] = track_data["nid"]
 
-    libraryId = None
-    if "nid" not in track_data:
-        libraryId = library.id
-        id = hash("%s:%s:%s" %
-                  (track_data["title"], track_data["album"], track_data["albumArtist"]))
-        track_data["nid"] = "FT%s" % id
+    if track_data["id"] in track_by_id:
+        return track_by_id[track_data["id"]]
 
-    if track_data["nid"] in track_by_id:
-        return track_by_id[track_data["nid"]]
-
-    track = Track(track_data, libraryId)
+    track = Track(track_data)
     album = get_album_for_track(library.client, track_data)
     track.albumId = album.id
 

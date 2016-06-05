@@ -160,7 +160,7 @@ def get_real_album_for_track(client, track_data):
 
 
 def get_album_for_track(client, track_data):
-    if track_data["nid"][0] == "F":
+    if "nid" not in track_data:
         return get_fake_album_for_track(client, track_data)
     else:
         return get_real_album_for_track(client, track_data)

@@ -23,10 +23,10 @@ logger = logging.getLogger("googlemusicchannel.service.url")
 def MetadataObjectForURL(url):
     logger.debug("Requested metadata for %s" % url)
 
-    item = music.get_item_for_url(url)
+    (library, item) = music.get_item_for_url(url)
 
     if isinstance(item, Track):
-        return MetadataObjectForTrack(item)
+        return MetadataObjectForTrack(library, item)
 
     raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 
@@ -34,25 +34,25 @@ def MetadataObjectForURL(url):
 def MediaObjectsForURL(url):
     logger.debug("Requested media objects for %s" % url)
 
-    item = music.get_item_for_url(url)
+    (library, item) = music.get_item_for_url(url)
 
     if isinstance(item, Track):
-        return MediaObjectsForTrack(item)
+        return MediaObjectsForTrack(library, item)
 
     raise Exception("Unknown object type for url '%s' %s" % (url, repr(item)))
 
 
-def MetadataObjectForTrack(track):
+def MetadataObjectForTrack(library, track):
     return TrackObject(
         title=track.title,
         artist=track.album.artist.name,
         album=track.album.name,
         duration=track.duration,
-        url=track.url
+        url=track.get_url
     )
 
 
-def MediaObjectsForTrack(track):
+def MediaObjectsForTrack(library, track):
     return [
         MediaObject(
             bitrate=320,
@@ -60,7 +60,7 @@ def MediaObjectsForTrack(track):
             audio_codec=AudioCodec.MP3,
             duration=track.duration,
             parts=[PartObject(
-                key=Callback(LibraryTrackStream, trackId=track.id, quality="hi"),
+                key=Callback(LibraryTrackStream, libraryId=library.id, trackId=track.id, quality="hi"),
                 duration=track.duration,
                 streams=[
                     AudioStreamObject(
@@ -75,8 +75,9 @@ def MediaObjectsForTrack(track):
     ]
 
 
-def LibraryTrackStream(trackId, quality):
-    logger.debug("Attempt to stream")
-    track=music.get_track(trackId)
+def LibraryTrackStream(libraryId, trackId, quality):
+    library = music.get_library(libraryId)
+    device_id = library.get_device_id()
 
-    return Redirect(track.get_stream_url(quality))
+    url = library.client.get_stream_url(trackId, device_id, quality)
+    return Redirect(url)

@@ -36,7 +36,6 @@ class Station(object):
         tracks = self.library.client.get_station_tracks(self.id)
         return map(lambda t: get_track_for_data(self.library, t), tracks)
 
-
     @classmethod
     def unpickle(cls, library, data):
         return cls(library, data)
