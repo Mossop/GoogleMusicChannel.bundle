@@ -206,7 +206,7 @@ class Library(object):
         return set(map(lambda t: t.artist, self.get_tracks()))
 
     def get_albums(self):
-        return set(map(lambda t: LibraryAlbum(self, t.album), self.get_tracks()))
+        return map(lambda a: LibraryAlbum(self, a), set(map(lambda t: t.album, self.get_tracks())))
 
     def get_albums_by_artist(self, artist):
         return set(map(lambda t: LibraryAlbum(self, t.album),

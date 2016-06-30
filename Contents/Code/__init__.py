@@ -280,12 +280,10 @@ def LibraryAlbums(libraryId):
     library = music.get_library(libraryId)
     albums = library.get_albums()
     for album in smart_sort(albums):
-        oc.add(AlbumObject(
-            key=Callback(Album, libraryId=libraryId, albumId=album.id),
-            rating_key=album.id,
+        oc.add(DirectoryObject(
+            key=Callback(LibraryAlbum, libraryId=libraryId, albumId=album.id),
             title=album.name,
-            thumb=album.thumb,
-            artist=album.artist.name
+            thumb=album.thumb
         ))
 
     return oc
@@ -395,7 +393,7 @@ def LibraryArtistAlbums(libraryId, artistId):
 
     for album in smart_sort(artist.albums):
         oc.add(AlbumObject(
-            key=Callback(Album, libraryId=libraryId, albumId=album.id),
+            key=Callback(LibraryAlbumTracks, libraryId=libraryId, albumId=album.id),
             rating_key=album.id,
             title=album.name,
             thumb=album.thumb,
@@ -427,9 +425,37 @@ def LibraryArtistTracks(libraryId, artistId):
 
     return oc
 
-
 @route(PREFIX + "/glibrary/album")
-def Album(libraryId, albumId):
+def LibraryAlbum(libraryId, albumId):
+    library = music.get_library(libraryId)
+    album = music.get_album(albumId, library)
+
+    oc = ObjectContainer(
+        title2=album.name,
+        content=ContainerContent.Mixed,
+        art=url_or_default(album.thumb, R("album.png"))
+    )
+
+    if album.id[0:2] != "FB":
+        oc.add(DirectoryObject(
+            key=Callback(GetStation, libraryId=libraryId, type="album", objectId=album.id,
+                         name=Locale.LocalStringWithFormat("library_album_station", album.name),
+                         art=album.thumb),
+            title=Locale.LocalStringWithFormat("library_album_station", album.name),
+            thumb=R("station.png")
+        ))
+
+    oc.add(DirectoryObject(
+        key=Callback(LibraryAlbumTracks, libraryId=libraryId, albumId=album.id),
+        title=Locale.LocalStringWithFormat("library_album_tracks", album.name),
+        thumb=album.thumb
+    ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/album/tracks")
+def LibraryAlbumTracks(libraryId, albumId):
     library = music.get_library(libraryId)
     album = music.get_album(albumId, library)
 

@@ -7,6 +7,8 @@
   "library_stations": "Stations",
 
   "library_albums": "Albums",
+  "library_album_station": "%s Radio",
+  "library_album_tracks": "Songs on %s",
 
   "library_artists": "Artists",
   "library_artist_station": "%s Radio",
