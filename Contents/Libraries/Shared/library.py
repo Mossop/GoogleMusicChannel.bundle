@@ -16,6 +16,7 @@ import logging
 
 from globals import *
 from track import get_track_for_data
+from album import LibraryAlbum
 from station import Station
 
 from gmusicapi import Mobileclient
@@ -205,10 +206,11 @@ class Library(object):
         return set(map(lambda t: t.artist, self.get_tracks()))
 
     def get_albums(self):
-        return set(map(lambda t: t.album, self.get_tracks()))
+        return set(map(lambda t: LibraryAlbum(self, t.album), self.get_tracks()))
 
     def get_albums_by_artist(self, artist):
-        return set(map(lambda t: t.album, filter(lambda t: t.artist == artist, self.get_tracks())))
+        return set(map(lambda t: LibraryAlbum(self, t.album),
+                       filter(lambda t: t.artist == artist, self.get_tracks())))
 
     def get_tracks(self):
         return map(lambda id: track_by_id[id], self.track_by_id.values())
@@ -236,6 +238,13 @@ class Library(object):
 
     def get_station(self, id):
         return self.station_by_id[id]
+
+    def get_station_id(self, name, **kwargs):
+        return self.client.create_station(name, **kwargs)
+
+    def get_station_tracks(self, stationId):
+        tracks = self.client.get_station_tracks(stationId)
+        return map(lambda t: get_track_for_data(self, t, False), tracks)
 
 
 class Playlist(object):

@@ -123,17 +123,20 @@ def get_artist_for_track(client, track_data):
 
 
 # Called when we should expect a real artist to exist
-def get_artist_for_album(client, album_data, track_data):
+def get_artist_for_album(client, album_data, track_data, lookups=True):
+    artist = None
+
     if album_data["artistId"][0] in artist_by_id:
         artist = artist_by_id[album_data["artistId"][0]]
     elif album_data["artistId"][0] == "":
         artist = various_artists
-    else:
+    elif lookups:
         artist_data = client.get_artist_info(album_data["artistId"][0], False, 0, 0)
         artist = Artist(artist_data)
 
-    if artist.name != album_data["artist"]:
-        logger.warn("Invalid album returned for %s." % album_data["artist"])
+    if artist is None or artist.name != album_data["artist"]:
+        if lookups:
+            logger.warn("Invalid album returned for %s." % album_data["artist"])
         return get_artist_for_track(client, track_data)
 
     return artist

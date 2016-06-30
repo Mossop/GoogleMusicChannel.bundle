@@ -1,10 +1,18 @@
 {
   "title": "Google Music",
   "library": "My Library",
-  "library_playlists": "My Playlists",
-  "library_stations": "My Stations",
-  "library_albums": "My Albums",
-  "library_artists": "My Artists",
-  "library_songs": "My Songs",
-  "library_genres": "My Genres"
+  "genres": "All Genres",
+
+  "library_playlists": "Playlists",
+  "library_stations": "Stations",
+
+  "library_albums": "Albums",
+
+  "library_artists": "Artists",
+  "library_artist_station": "%s Radio",
+  "library_artist_album": "Albums by %s",
+  "library_artist_tracks": "All songs by %s",
+
+  "library_songs": "All songs",
+  "library_genres": "Genres"
 }

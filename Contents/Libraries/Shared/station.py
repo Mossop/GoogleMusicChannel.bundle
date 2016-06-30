@@ -15,7 +15,6 @@
 import logging
 
 from globals import *
-from track import get_track_for_data
 
 logger = logging.getLogger("googlemusicchannel.library")
 
@@ -33,8 +32,7 @@ class Station(object):
         return self.data
 
     def get_tracks(self):
-        tracks = self.library.client.get_station_tracks(self.id)
-        return map(lambda t: get_track_for_data(self.library, t), tracks)
+        return self.library.get_station_tracks(self.id)
 
     @classmethod
     def unpickle(cls, library, data):

@@ -125,9 +125,9 @@ def get_fake_album_for_track(client, track_data):
     }
 
     if "albumArtRef" in track_data:
-        album_data["albumArtRef"] = track_data["artistArtRef"][0]["url"]
-    elif "artistArtRef" in track_data:
         album_data["albumArtRef"] = track_data["albumArtRef"][0]["url"]
+    elif "artistArtRef" in track_data:
+        album_data["albumArtRef"] = track_data["artistArtRef"][0]["url"]
     else:
         album_data["albumArtRef"] = None
 
@@ -138,7 +138,7 @@ def get_fake_album_for_track(client, track_data):
     return album
 
 
-def get_real_album_for_track(client, track_data):
+def get_real_album_for_track(client, track_data, lookups):
     # This is a real track ID, look up the album with the client
     albumId = track_data["albumId"]
 
@@ -153,14 +153,14 @@ def get_real_album_for_track(client, track_data):
         return get_fake_album_for_track(client, track_data)
 
     if album.artistId is None:
-        artist = get_artist_for_album(client, album_data, track_data)
+        artist = get_artist_for_album(client, album_data, track_data, lookups)
         album.artistId = artist.id
 
     return album
 
 
-def get_album_for_track(client, track_data):
-    if "nid" not in track_data:
+def get_album_for_track(client, track_data, lookups=True):
+    if not lookups or "nid" not in track_data:
         return get_fake_album_for_track(client, track_data)
     else:
         return get_real_album_for_track(client, track_data)

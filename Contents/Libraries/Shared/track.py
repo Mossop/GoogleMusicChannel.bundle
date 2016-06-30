@@ -87,6 +87,10 @@ class Track(object):
         return self.data["title"]
 
     @property
+    def name(self):
+        return self.data["title"]
+
+    @property
     def thumb(self):
         return self.album.thumb
 
@@ -105,7 +109,7 @@ class Track(object):
         return library.client.get_stream_url(self.id, device_id, quality)
 
 
-def get_track_for_data(library, track_data):
+def get_track_for_data(library, track_data, lookups=True):
     if "nid" in track_data:
         track_data["id"] = track_data["nid"]
 
@@ -113,7 +117,7 @@ def get_track_for_data(library, track_data):
         return track_by_id[track_data["id"]]
 
     track = Track(track_data)
-    album = get_album_for_track(library.client, track_data)
+    album = get_album_for_track(library.client, track_data, lookups)
     track.albumId = album.id
 
     return track

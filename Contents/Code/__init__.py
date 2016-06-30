@@ -105,16 +105,15 @@ def ValidatePrefs():
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
 def Main():
-    return Library(0)
-#    oc = ObjectContainer(content=ContainerContent.Mixed)
-#
-#    oc.add(DirectoryObject(
-#        key=Callback(Library, libraryId=0),
-#        title=L("library"),
-#        thumb=R("library.png")
-#    ))
-#
-#    return oc
+    oc = ObjectContainer(content=ContainerContent.Mixed)
+
+    oc.add(DirectoryObject(
+        key=Callback(Library, libraryId=0),
+        title=L("library"),
+        thumb=R("library.png")
+    ))
+
+    return oc
 
 
 @route(PREFIX + "/glibrary")
@@ -212,7 +211,8 @@ def LibraryStations(libraryId):
     stations = library.get_stations()
     for station in smart_sort(stations):
         oc.add(PlaylistObject(
-            key=Callback(LibraryStation, libraryId=libraryId, stationId=station.id),
+            key=Callback(LibraryStation, libraryId=libraryId, stationId=station.id,
+                         name=station.name, art=station.art),
             title=station.name,
             thumb=url_or_default(station.thumb, R("station.png"))
         ))
@@ -220,19 +220,27 @@ def LibraryStations(libraryId):
     return oc
 
 
-@route(PREFIX + "/station")
-def LibraryStation(libraryId, stationId):
+@route(PREFIX + "/getstation")
+def GetStation(libraryId, type, objectId, name, art):
     library = music.get_library(libraryId)
-    station = library.get_station(stationId)
+    kwargs = {}
+    kwargs["%s_id" % type] = objectId
+    stationId = library.get_station_id(name, **kwargs)
+    return LibraryStation(libraryId, stationId, name, art)
+
+
+@route(PREFIX + "/station")
+def LibraryStation(libraryId, stationId, name, art):
+    library = music.get_library(libraryId)
 
     oc = ObjectContainer(
-        title2=station.name,
+        title2=name,
         content=ContainerContent.Tracks,
         view_group="track_list",
-        art=url_or_default(station.art, R("station.png"))
+        art=url_or_default(art, R("station.png"))
     )
 
-    for track in station.get_tracks():
+    for track in library.get_station_tracks(stationId):
         oc.add(track_object(library, track))
 
     return oc
@@ -345,6 +353,41 @@ def LibraryArtist(libraryId, artistId):
 
     oc = ObjectContainer(
         title2=artist.name,
+        content=ContainerContent.Mixed,
+        art=url_or_default(artist.thumb, R("artist.png"))
+    )
+
+    if artist.id[0:2] != "FA":
+        oc.add(DirectoryObject(
+            key=Callback(GetStation, libraryId=libraryId, type="artist", objectId=artist.id,
+                         name=Locale.LocalStringWithFormat("library_artist_station", artist.name),
+                         art=artist.thumb),
+            title=Locale.LocalStringWithFormat("library_artist_station", artist.name),
+            thumb=R("station.png")
+        ))
+
+    oc.add(DirectoryObject(
+        key=Callback(LibraryArtistAlbums, libraryId=libraryId, artistId=artist.id),
+        title=Locale.LocalStringWithFormat("library_artist_album", artist.name),
+        thumb=R("album.png")
+    ))
+
+    oc.add(DirectoryObject(
+        key=Callback(LibraryArtistTracks, libraryId=libraryId, artistId=artist.id),
+        title=Locale.LocalStringWithFormat("library_artist_tracks", artist.name),
+        thumb=R("track.png")
+    ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/artist/albums")
+def LibraryArtistAlbums(libraryId, artistId):
+    library = music.get_library(libraryId)
+    artist = music.get_artist(artistId, library)
+
+    oc = ObjectContainer(
+        title2=Locale.LocalStringWithFormat("library_artist_album", artist.name),
         content=ContainerContent.Albums,
         view_group="album_list",
         art=url_or_default(artist.thumb, R("artist.png"))
@@ -358,6 +401,29 @@ def LibraryArtist(libraryId, artistId):
             thumb=album.thumb,
             artist=album.artist.name
         ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/artist/tracks")
+def LibraryArtistTracks(libraryId, artistId):
+    library = music.get_library(libraryId)
+    artist = music.get_artist(artistId, library)
+
+    oc = ObjectContainer(
+        title2=Locale.LocalStringWithFormat("library_artist_tracks", artist.name),
+        content=ContainerContent.Tracks,
+        view_group="track_list",
+        art=url_or_default(artist.thumb, R("artist.png"))
+    )
+
+    all_tracks = []
+    for album in artist.albums:
+        for track in album.tracks:
+            all_tracks.append(track)
+
+    for track in smart_sort(all_tracks):
+        oc.add(track_object(library, track))
 
     return oc
 
