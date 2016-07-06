@@ -19,6 +19,22 @@ from globals import *
 logger = logging.getLogger("googlemusicchannel.library")
 
 
+def get_art_for_data(data):
+    if "compositeArtRefs" in data:
+        arts = filter(lambda a: float(a["aspectRatio"]) > 1, data["compositeArtRefs"])
+        if len(arts) > 0:
+            return arts[0]["url"]
+    return get_thumb_for_data(data)
+
+
+def get_thumb_for_data(data):
+    if "compositeArtRefs" in data:
+        thumbs = filter(lambda a: float(a["aspectRatio"]) == 1, data["compositeArtRefs"])
+        if len(thumbs) > 0:
+            return thumbs[0]["url"]
+    return None
+
+
 class Station(object):
     library = None
     data = None
@@ -48,18 +64,8 @@ class Station(object):
 
     @property
     def art(self):
-        if "compositeArtRefs" in self.data:
-            arts = filter(lambda a: float(a["aspectRatio"]) > 1, self.data["compositeArtRefs"])
-            if len(arts) == 0:
-                return self.thumb
-            return arts[0]["url"]
-        return None
+        get_art_for_data(self.data)
 
     @property
     def thumb(self):
-        if "compositeArtRefs" in self.data:
-            thumbs = filter(lambda a: float(a["aspectRatio"]) == 1, self.data["compositeArtRefs"])
-            if len(thumbs) == 0:
-                return None
-            return thumbs[0]["url"]
-        return None
+        get_thumb_for_data(self.data)

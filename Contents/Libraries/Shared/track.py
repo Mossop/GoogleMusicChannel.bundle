@@ -30,15 +30,16 @@ class Track(object):
         self.data = data
         track_by_id[self.id] = self
 
-        if data["genre"] in genre_by_name:
-            genre = genre_by_name[data["genre"]]
-            if isinstance(genre, FakeGenre):
+        if "genre" in data:
+            if data["genre"] in genre_by_name:
+                genre = genre_by_name[data["genre"]]
+                if isinstance(genre, FakeGenre):
+                    genre.examples.append(self)
+            else:
+                genre = FakeGenre(data["genre"])
                 genre.examples.append(self)
-        else:
-            genre = FakeGenre(data["genre"])
-            genre.examples.append(self)
-            genre_by_name[data["genre"]] = genre
-            root_genres.append(genre)
+                genre_by_name[data["genre"]] = genre
+                root_genres.append(genre)
 
     @classmethod
     def unpickle(cls, data):

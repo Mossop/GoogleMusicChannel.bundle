@@ -17,7 +17,7 @@ import logging
 from globals import *
 from track import get_track_for_data
 from album import LibraryAlbum
-from station import Station
+from station import Station, get_art_for_data, get_thumb_for_data
 
 from gmusicapi import Mobileclient
 
@@ -242,9 +242,39 @@ class Library(object):
     def get_station_id(self, name, **kwargs):
         return self.client.create_station(name, **kwargs)
 
-    def get_station_tracks(self, stationId):
-        tracks = self.client.get_station_tracks(stationId)
+    def get_station_tracks(self, stationId, num_tracks=25):
+        tracks = self.client.get_station_tracks(stationId, num_tracks)
         return map(lambda t: get_track_for_data(self, t, False), tracks)
+
+    def get_listen_situations(self):
+        situations = self.client.get_listen_now_situations()
+        logger.info("Found %d situations" % len(situations))
+
+        def build_situation(data):
+            sit = {}
+
+            for prop in ["title", "imageUrl", "wideImageUrl"]:
+                sit[prop] = data[prop]
+
+            if "stations" in data:
+                sit["stations"] = []
+
+                for station in data["stations"]:
+                    sit["stations"].append({
+                        "id": station["seed"]["curatedStationId"],
+                        "name": station["name"],
+                        "thumb": get_thumb_for_data(station),
+                        "art": get_art_for_data(station)
+                    })
+            elif "situations" in data:
+                sit["situations"] = [build_situation(d) for d in data["situations"]]
+            else:
+                logger.error("Unexpected keys in situation: %s", repr(data.keys()))
+                return None
+
+            return sit
+
+        return filter(lambda s: s is not None, [build_situation(d) for d in situations])
 
 
 class Playlist(object):

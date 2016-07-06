@@ -105,13 +105,23 @@ def ValidatePrefs():
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
 def Main():
+    library = music.get_library(0)
     oc = ObjectContainer(content=ContainerContent.Mixed)
 
     oc.add(DirectoryObject(
-        key=Callback(Library, libraryId=0),
+        key=Callback(Library, libraryId=library.id),
         title=L("library"),
         thumb=R("library.png")
     ))
+
+    situations = library.get_listen_situations()
+    for situation in situations:
+        oc.add(DirectoryObject(
+            key=Callback(LibrarySituation, libraryId=library.id,
+                         situation=JSON.StringFromObject(situation)),
+            title=situation["title"],
+            thumb=situation["imageUrl"]
+        ))
 
     return oc
 
@@ -155,6 +165,35 @@ def Library(libraryId):
         title=L("library_genres"),
         thumb=R("genre.png")
     ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/situation")
+def LibrarySituation(libraryId, situation):
+    situation=JSON.ObjectFromString(situation)
+    oc = ObjectContainer(
+        title2=situation["title"],
+        content=ContainerContent.Playlists,
+        art=situation["wideImageUrl"],
+    )
+
+    if "stations" in situation:
+        for station in situation["stations"]:
+            oc.add(DirectoryObject(
+                key=Callback(GetStation, libraryId=libraryId, type="curated_station",
+                             objectId=station["id"], name=station["name"], art=station["name"]),
+                title=station["name"],
+                thumb=station["thumb"]
+            ))
+    elif "situations" in situation:
+        for situation in situation["situations"]:
+            oc.add(DirectoryObject(
+                key=Callback(LibrarySituation, libraryId=libraryId,
+                             situation=JSON.StringFromObject(situation)),
+                title=situation["title"],
+                thumb=situation["imageUrl"]
+            ))
 
     return oc
 
@@ -240,7 +279,7 @@ def LibraryStation(libraryId, stationId, name, art):
         art=url_or_default(art, R("station.png"))
     )
 
-    for track in library.get_station_tracks(stationId):
+    for track in library.get_station_tracks(stationId, num_tracks=50):
         oc.add(track_object(library, track))
 
     return oc
