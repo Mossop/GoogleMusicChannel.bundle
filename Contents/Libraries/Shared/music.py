@@ -27,7 +27,7 @@ from globals import *
 
 logger = logging.getLogger("googlemusicchannel.music")
 
-DB_SCHEMA = 2
+DB_SCHEMA = 3
 
 
 def load_from(data):

@@ -138,7 +138,7 @@ def get_fake_album_for_track(client, track_data):
     return album
 
 
-def get_real_album_for_track(client, track_data, lookups):
+def get_real_album_for_track(client, track_data, lookups=True):
     # This is a real track ID, look up the album with the client
     albumId = track_data["albumId"]
 

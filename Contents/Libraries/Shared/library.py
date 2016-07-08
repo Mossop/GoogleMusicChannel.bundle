@@ -34,6 +34,8 @@ class Library(object):
     client = None
     device_id = None
 
+    situations = None
+
     # These are all the tracks in the user's library. The key is the track's
     # library ID, not the store ID
     track_by_id = None
@@ -199,6 +201,8 @@ class Library(object):
                 del self.station_by_id[rem]
 
             logger.info("Library has %d stations." % (len(self.station_by_id)))
+
+            self.situations = self.load_listen_situations()
         except:
             logger.exception("Failed to update library.")
 
@@ -246,7 +250,7 @@ class Library(object):
         tracks = self.client.get_station_tracks(stationId, num_tracks)
         return map(lambda t: get_track_for_data(self, t, False), tracks)
 
-    def get_listen_situations(self):
+    def load_listen_situations(self):
         situations = self.client.get_listen_now_situations()
         logger.info("Found %d situations" % len(situations))
 
@@ -276,6 +280,10 @@ class Library(object):
 
         return filter(lambda s: s is not None, [build_situation(d) for d in situations])
 
+    def get_listen_situations(self):
+        if self.situations is None:
+            self.situations = self.load_listen_situations()
+        return self.situations
 
 class Playlist(object):
     data = None
