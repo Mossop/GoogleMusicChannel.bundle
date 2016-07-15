@@ -63,6 +63,9 @@ def set_credentials(username, password):
 
 
 def refresh():
+    if len(libraries) == 0:
+        return None
+
     logger.info("Updating genres.")
 
     g_root = []
@@ -125,7 +128,10 @@ def refresh():
 
 
 def get_library(id):
-    return libraries[int(id)]
+    try:
+        return libraries[int(id)]
+    except KeyError:
+        return None
 
 
 def get_genre(name):

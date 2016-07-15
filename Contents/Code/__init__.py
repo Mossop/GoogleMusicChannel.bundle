@@ -80,7 +80,7 @@ def login():
 
 
 def Start():
-    logger.debug("Start called for %s" % (Prefs["username"]))
+    logger.debug("Start called for %s %s" % (Prefs["username"], Prefs["password"]))
     if Data.Exists(DB_NAME):
         try:
             data = Data.LoadObject(DB_NAME)
@@ -105,8 +105,11 @@ def ValidatePrefs():
 
 @handler(PREFIX, L("title"), thumb="googlemusic.png")
 def Main():
-    library = music.get_library(0)
     oc = ObjectContainer(content=ContainerContent.Mixed)
+
+    library = music.get_library(0)
+    if library is None:
+        return oc
 
     oc.add(DirectoryObject(
         key=Callback(Library, libraryId=library.id),
