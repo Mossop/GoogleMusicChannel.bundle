@@ -104,6 +104,10 @@ class LibraryAlbum(object):
         return self.album.artist
 
     @property
+    def art(self):
+        return self.album.art
+
+    @property
     def thumb(self):
         return self.album.thumb
 

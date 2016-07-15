@@ -338,7 +338,7 @@ def LibraryAlbums(libraryId):
         oc.add(DirectoryObject(
             key=Callback(LibraryAlbum, libraryId=libraryId, albumId=album.id),
             title=album.name,
-            thumb=album.thumb
+            thumb=url_or_default(album.thumb, R("album.png"))
         ))
 
     return oc
@@ -451,7 +451,7 @@ def LibraryArtistAlbums(libraryId, artistId):
             key=Callback(LibraryAlbumTracks, libraryId=libraryId, albumId=album.id),
             rating_key=album.id,
             title=album.name,
-            thumb=album.thumb,
+            thumb=url_or_default(album.thumb, R("album.png")),
             artist=album.artist.name
         ))
 
@@ -484,6 +484,8 @@ def LibraryArtistTracks(libraryId, artistId):
 def LibraryAlbum(libraryId, albumId):
     library = music.get_library(libraryId)
     album = music.get_album(albumId, library)
+    if album.id[0:2] == "FB":
+        return LibraryAlbumTracks(libraryId, albumId)
 
     oc = ObjectContainer(
         title2=album.name,
@@ -491,19 +493,18 @@ def LibraryAlbum(libraryId, albumId):
         art=url_or_default(album.thumb, R("album.png"))
     )
 
-    if album.id[0:2] != "FB":
-        oc.add(DirectoryObject(
-            key=Callback(GetStation, libraryId=libraryId, type="album", objectId=album.id,
-                         name=Locale.LocalStringWithFormat("library_album_station", album.name),
-                         art=album.thumb),
-            title=Locale.LocalStringWithFormat("library_album_station", album.name),
-            thumb=R("station.png")
-        ))
+    oc.add(DirectoryObject(
+        key=Callback(GetStation, libraryId=libraryId, type="album", objectId=album.id,
+                     name=Locale.LocalStringWithFormat("library_album_station", album.name),
+                     art=url_or_default(album.art, R("album.png"))),
+        title=Locale.LocalStringWithFormat("library_album_station", album.name),
+        thumb=R("station.png")
+    ))
 
     oc.add(DirectoryObject(
         key=Callback(LibraryAlbumTracks, libraryId=libraryId, albumId=album.id),
         title=Locale.LocalStringWithFormat("library_album_tracks", album.name),
-        thumb=album.thumb
+        thumb=url_or_default(album.thumb, R("album.png"))
     ))
 
     return oc
