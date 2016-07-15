@@ -120,12 +120,6 @@ def Main():
         thumb=R("situations.png")
     ))
 
-    oc.add(DirectoryObject(
-        key=Callback(Recent, libraryId=library.id),
-        title=L("recent"),
-        thumb=R("recent.png")
-    ))
-
     return oc
 
 
@@ -187,15 +181,6 @@ def Library(libraryId):
         title=L("library_genres"),
         thumb=R("genre.png")
     ))
-
-    return oc
-
-
-@route(PREFIX + "/glibrary/recent")
-def Recent(libraryId):
-    library = music.get_library(0)
-    oc = ObjectContainer(content=ContainerContent.Mixed, art=R("recent.png"),
-                         title2=L("recent"))
 
     return oc
 
