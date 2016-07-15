@@ -34,7 +34,7 @@ def get_album_hash(artist, name):
     return hash("%s:%s" % (artist, name))
 
 
-def get_images_for_data(data, filt = lambda i: True):
+def get_images_for_data(data, filt=lambda i: True):
     images = []
 
     def get_image(data):
@@ -53,7 +53,6 @@ def get_images_for_data(data, filt = lambda i: True):
             except:
                 logger.error("Failed to find an %s in %s" % (key, repr(data)))
         return []
-
 
     for key in ["compositeArtRef", "albumArtRef", "artistArtRef", "images", "imageUrl"]:
         images.extend(get_images(data, "%ss" % key))
