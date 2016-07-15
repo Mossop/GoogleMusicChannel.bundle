@@ -114,6 +114,27 @@ def Main():
         thumb=R("library.png")
     ))
 
+    oc.add(DirectoryObject(
+        key=Callback(Situations, libraryId=library.id),
+        title=L("situations"),
+        thumb=R("situations.png")
+    ))
+
+    oc.add(DirectoryObject(
+        key=Callback(Recent, libraryId=library.id),
+        title=L("recent"),
+        thumb=R("recent.png")
+    ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/situations")
+def Situations(libraryId):
+    library = music.get_library(0)
+    oc = ObjectContainer(content=ContainerContent.Mixed, art=R("situations.png"),
+                         title2=L("situations"))
+
     situations = library.get_listen_situations()
     for situation in situations:
         oc.add(DirectoryObject(
@@ -128,7 +149,8 @@ def Main():
 
 @route(PREFIX + "/glibrary")
 def Library(libraryId):
-    oc = ObjectContainer(content=ContainerContent.Mixed, title2=L("library"))
+    oc = ObjectContainer(content=ContainerContent.Mixed, art=R("library.png"),
+                         title2=L("library"))
 
     oc.add(DirectoryObject(
         key=Callback(LibraryPlaylists, libraryId=libraryId),
@@ -165,6 +187,15 @@ def Library(libraryId):
         title=L("library_genres"),
         thumb=R("genre.png")
     ))
+
+    return oc
+
+
+@route(PREFIX + "/glibrary/recent")
+def Recent(libraryId):
+    library = music.get_library(0)
+    oc = ObjectContainer(content=ContainerContent.Mixed, art=R("recent.png"),
+                         title2=L("recent"))
 
     return oc
 

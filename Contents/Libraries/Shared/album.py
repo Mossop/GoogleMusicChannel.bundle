@@ -16,7 +16,7 @@ import logging
 
 from globals import *
 from artist import get_artist_for_album, get_artist_for_track
-from utils import hash, urlize
+from utils import hash, urlize, get_art_for_data, get_thumb_for_data
 
 logger = logging.getLogger("googlemusicchannel.album")
 
@@ -62,8 +62,12 @@ class Album(object):
         return None
 
     @property
+    def art(self):
+        return get_art_for_data(self.data)
+
+    @property
     def thumb(self):
-        return self.data["albumArtRef"]
+        return get_thumb_for_data(self.data)
 
     @property
     def url(self):

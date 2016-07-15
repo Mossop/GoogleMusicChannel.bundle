@@ -14,7 +14,7 @@
 
 import logging
 
-from utils import hash, urlize
+from utils import urlize
 from album import get_album_for_track
 from globals import *
 from genre import FakeGenre
@@ -90,6 +90,10 @@ class Track(object):
     @property
     def name(self):
         return self.data["title"]
+
+    @property
+    def art(self):
+        return self.album.art
 
     @property
     def thumb(self):

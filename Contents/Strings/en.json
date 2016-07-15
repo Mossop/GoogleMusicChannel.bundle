@@ -1,6 +1,8 @@
 {
   "title": "Google Music",
   "library": "My Library",
+  "situations": "Things for Now",
+  "recent": "Recently Played",
   "genres": "All Genres",
 
   "library_playlists": "Playlists",

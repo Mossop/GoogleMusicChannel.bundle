@@ -15,6 +15,7 @@
 import logging
 
 from globals import *
+from utils import get_art_for_data, get_thumb_for_data
 
 logger = logging.getLogger("googlemusicchannel.genre")
 
@@ -77,7 +78,9 @@ class Genre(object):
         return self.data["name"]
 
     @property
+    def art(self):
+        return get_art_for_data(self.data)
+
+    @property
     def thumb(self):
-        if "images" in self.data and len(self.data["images"]) > 0:
-            return self.data["images"][0]["url"]
-        return None
+        return get_thumb_for_data(self.data)

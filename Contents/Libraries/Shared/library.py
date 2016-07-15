@@ -17,7 +17,8 @@ import logging
 from globals import *
 from track import get_track_for_data
 from album import LibraryAlbum
-from station import Station, get_art_for_data, get_thumb_for_data
+from station import Station
+from utils import get_art_for_data, get_thumb_for_data
 
 from gmusicapi import Mobileclient
 
