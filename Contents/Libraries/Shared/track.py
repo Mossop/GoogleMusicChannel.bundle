@@ -109,10 +109,11 @@ class Track(object):
         return "%s%s?t=%s&u=%d" % (base_path, self.id, param, library.id)
 
     def get_stream_url(self, library, quality):
-        device_id = library.get_device_id()
+        client = library.get_stream_client()
+        url = client.get_stream_url(self.id, None, quality)
+        client.logout()
 
-        return library.client.get_stream_url(self.id, device_id, quality)
-
+        return url
 
 def get_track_for_data(library, track_data, lookups=True):
     if "nid" in track_data:
@@ -122,7 +123,7 @@ def get_track_for_data(library, track_data, lookups=True):
         return track_by_id[track_data["id"]]
 
     track = Track(track_data)
-    album = get_album_for_track(library.client, track_data, lookups)
+    album = get_album_for_track(library.get_library_client(), track_data, lookups)
     track.albumId = album.id
 
     return track

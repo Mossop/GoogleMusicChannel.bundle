@@ -60,7 +60,12 @@ def MediaObjectsForTrack(library, track):
             audio_codec=AudioCodec.MP3,
             duration=track.duration,
             parts=[PartObject(
-                key=Callback(LibraryTrackStream, libraryId=library.id, trackId=track.id, quality="hi"),
+                key=Callback(
+                    LibraryTrackStream,
+                    libraryId=library.id,
+                    trackId=track.id,
+                    quality="hi"
+                ),
                 duration=track.duration,
                 streams=[
                     AudioStreamObject(
@@ -77,7 +82,7 @@ def MediaObjectsForTrack(library, track):
 
 def LibraryTrackStream(libraryId, trackId, quality):
     library = music.get_library(libraryId)
-    device_id = library.get_device_id()
-
-    url = library.client.get_stream_url(trackId, device_id, quality)
+    client = library.get_stream_client()
+    url = client.get_stream_url(trackId, None, quality)
+    client.logout()
     return Redirect(url)

@@ -27,7 +27,7 @@ from globals import *
 
 logger = logging.getLogger("googlemusicchannel.music")
 
-DB_SCHEMA = 3
+DB_SCHEMA = 1
 
 
 def load_from(data):
@@ -69,20 +69,35 @@ def refresh():
     logger.info("Updating genres.")
 
     g_root = []
+    g_ids = set()
+    g_names = set()
 
     def find_genres(parent, list):
-        genres = libraries.values()[0].client.get_genres(parent)
+        genres = libraries.values()[0].get_library_client().get_genres(parent)
         for data in genres:
             genre = Genre(data)
             list.append(genre)
             genre_by_id[data["id"]] = genre
             genre_by_name[genre.name] = genre
+            g_ids.add(data["id"])
+            g_names.add(genre.name)
 
             find_genres(data["id"], genre.children)
 
-    find_genres(None, g_root)
-    root_genres = g_root
+    try:
+        find_genres(None, g_root)
+    except:
+        logger.error("Failed to update genres")
 
+    bad = set(genre_by_id.keys()) - g_ids
+    for id in bad:
+        del genre_by_id[id]
+
+    bad = set(genre_by_name.keys()) - g_names
+    for name in bad:
+        del genre_by_name[name]
+
+    root_genres = g_root
     logger.info("Found %d genres." % (len(genre_by_id)))
 
     for library in libraries.values():

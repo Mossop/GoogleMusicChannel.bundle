@@ -33,7 +33,6 @@ class Library(object):
     password = None
 
     client = None
-    device_id = None
 
     situations = None
 
@@ -56,17 +55,11 @@ class Library(object):
 
         self.client = Mobileclient(False, False, True)
 
-        try:
-            self.client.login(username, password, Mobileclient.FROM_MAC_ADDRESS)
-        except:
-            logger.exception("Client couldn't log in.")
-
     # Because of threading shenanigans we have to manually pickle classes
     def pickle(self):
         return {
             "username": self.username,
             "password": self.password,
-            "device_id": self.device_id,
             "tracks": self.track_by_id,
             "playlists": map(lambda p: p.pickle(), self.playlist_by_id.values()),
             "stations": map(lambda s: s.pickle(), self.station_by_id.values())
@@ -76,7 +69,6 @@ class Library(object):
     def unpickle(cls, data):
         try:
             library = cls(data["username"], data["password"])
-            library.device_id = data["device_id"]
 
             library.clear()
 
@@ -85,26 +77,45 @@ class Library(object):
                 Playlist.unpickle(library, playlist_data)
 
             for station_data in data["stations"]:
-                station = Station.unpickle(library, station_data)
+                Station.unpickle(library, station_data)
         except:
             logger.exception("Failed to load data.")
             return None
 
+    def get_library_client(self):
+        if self.client.is_authenticated():
+            return self.client
+
+        logger.info("Logging in '%s' with MAC address." % (self.username))
+        self.client.login(self.username, self.password, Mobileclient.FROM_MAC_ADDRESS)
+
+        if not self.client.is_authenticated():
+            raise Exception("Client couldn't log in.")
+
+        return self.client
+
+    def get_stream_client(self):
+        device_id = self.get_device_id()
+        client = Mobileclient(False, False, True)
+        logger.info("Logging in '%s' with device id '%s'." % (self.username, device_id))
+        client.login(self.username, self.password, device_id)
+
+        if not client.is_authenticated():
+            raise Exception("Client couldn't log in.")
+
+        return client
+
     def logout(self):
-        self.client.logout()
+        if self.client.is_authenticated():
+            self.client.logout()
 
     def get_device_id(self):
-        if self.device_id is not None:
-            return self.device_id
-
-        devices = self.client.get_registered_devices()
+        devices = self.get_library_client().get_registered_devices()
         for device in devices:
             if device["type"] == "ANDROID":
-                self.device_id = device["id"][2:]
-                return self.device_id
+                return device["id"][2:]
             if device["type"] == "IOS":
-                self.device_id = device["id"]
-                return self.device_id
+                return device["id"]
 
         raise Exception("Unable to find a valid device ID")
 
@@ -117,11 +128,14 @@ class Library(object):
         logger.info("Starting library update.")
 
         try:
-            if not self.client.is_authenticated:
-                logger.error("Client isn't authenticated.")
-                return
+            client = self.get_library_client()
+        except:
+            logger.exception("Failed to log in to library.")
+            self.clear()
+            return
 
-            data = self.client.get_all_songs(False, False)
+        try:
+            data = client.get_all_songs(False, False)
             logger.info("Found %d tracks in the cloud library." % (len(data)))
 
             track_ids = set(map(lambda s: s["id"], data))
@@ -168,19 +182,19 @@ class Library(object):
                     if trackId in track_by_id:
                         playlist.track_ids.append(track_by_id[trackId].id)
                         continue
-                    track_data = self.client.get_track_info(trackId)
+                    track_data = client.get_track_info(trackId)
                     playlist.track_ids.append(get_track_for_data(self, track_data).id)
 
-            playlists = self.client.get_all_user_playlist_contents()
+            playlists = client.get_all_user_playlist_contents()
             for playlist in playlists:
                 if playlist["deleted"]:
                     continue
                 add_playlist(playlist, playlist["tracks"])
 
-            all_playlists = self.client.get_all_playlists(False, False)
+            all_playlists = client.get_all_playlists(False, False)
             for playlist in all_playlists:
                 if playlist.get("type") != "USER_GENERATED":
-                    entries = self.client.get_shared_playlist_contents(playlist["shareToken"])
+                    entries = client.get_shared_playlist_contents(playlist["shareToken"])
                     add_playlist(playlist, entries)
 
             gonelists = set(self.playlist_by_id.keys()) - seenlists
@@ -190,7 +204,7 @@ class Library(object):
             logger.info("Library has %d playlists." % (len(self.playlist_by_id)))
 
             current_stations = set()
-            stations = self.client.get_all_stations()
+            stations = client.get_all_stations()
             for station_data in stations:
                 if not station_data["inLibrary"]:
                     continue
@@ -245,14 +259,14 @@ class Library(object):
         return self.station_by_id[id]
 
     def get_station_id(self, name, **kwargs):
-        return self.client.create_station(name, **kwargs)
+        return self.get_library_client().create_station(name, **kwargs)
 
     def get_station_tracks(self, stationId, num_tracks=25):
-        tracks = self.client.get_station_tracks(stationId, num_tracks)
+        tracks = self.get_library_client().get_station_tracks(stationId, num_tracks)
         return map(lambda t: get_track_for_data(self, t, False), tracks)
 
     def load_listen_situations(self):
-        situations = self.client.get_listen_now_situations()
+        situations = self.get_library_client().get_listen_now_situations()
         logger.info("Found %d situations" % len(situations))
 
         def build_situation(data):
