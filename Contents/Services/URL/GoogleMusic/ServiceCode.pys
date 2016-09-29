@@ -48,16 +48,17 @@ def MetadataObjectForTrack(library, track):
         artist=track.album.artist.name,
         album=track.album.name,
         duration=track.duration,
-        url=track.get_url
+        url=track.get_url(library),
+        thumb=url_or_default(track.thumb, R("track.png"))
     )
 
 
 def MediaObjectsForTrack(library, track):
     return [
         MediaObject(
-            bitrate=320,
             container=Container.MP3,
             audio_codec=AudioCodec.MP3,
+            audio_channels=2,
             duration=track.duration,
             parts=[PartObject(
                 key=Callback(
@@ -65,24 +66,16 @@ def MediaObjectsForTrack(library, track):
                     libraryId=library.id,
                     trackId=track.id,
                     quality="hi"
-                ),
-                duration=track.duration,
-                streams=[
-                    AudioStreamObject(
-                        selected=1,
-                        bitrate=320,
-                        codec=AudioCodec.MP3,
-                        duration=track.duration
-                    )
-                ]
+                )
             )]
         )
     ]
 
 
-def LibraryTrackStream(libraryId, trackId, quality):
+@indirect
+def LibraryTrackStream(libraryId, trackId, quality, **kwargs):
     library = music.get_library(libraryId)
     client = library.get_stream_client()
     url = client.get_stream_url(trackId, None, quality)
     client.logout()
-    return Redirect(url)
+    return IndirectResponse(TrackObject, url)

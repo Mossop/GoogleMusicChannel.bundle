@@ -483,6 +483,7 @@ def LibraryArtistTracks(libraryId, artistId):
 
     return oc
 
+
 @route(PREFIX + "/glibrary/album")
 def LibraryAlbum(libraryId, albumId):
     library = music.get_library(libraryId)
